@@ -100,9 +100,3 @@ export default function Example() {
 
 - Splash screen shows for 3 seconds then transitions based on auth state.
 - Replace placeholder images in `assets/images/` with production assets.
-
-## TODO
-
-- Integrate real Google Sign-In
-- Implement backend auth and data APIs
-- Add tests (Jest + RNTL)

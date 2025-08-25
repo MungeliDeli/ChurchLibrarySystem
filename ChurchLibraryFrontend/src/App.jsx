@@ -1,35 +1,120 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { Suspense, lazy } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useSelector } from "react-redux";
+import { selectIsAuthenticated, selectIsLoading } from "./store";
+import RouteGuard from "./components/auth/RouteGuard";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+import "./App.css";
+
+// Lazy load pages for code splitting
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
+const DashboardPage = lazy(() => import("./pages/dashboard/DashboardPage"));
+const LibraryPage = lazy(() => import("./pages/dashboard/LibraryPage"));
+const UsersPage = lazy(() => import("./pages/dashboard/UsersPage"));
+const StatisticsPage = lazy(() => import("./pages/dashboard/StatisticsPage"));
+const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+// Loading component for lazy-loaded routes
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <LoadingSpinner size="lg" />
+  </div>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isLoading = useSelector(selectIsLoading);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return <PageLoader />;
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Router>
+      <div className="App">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route
+              path="/login"
+              element={
+                <RouteGuard requireAuth={false}>
+                  <LoginPage />
+                </RouteGuard>
+              }
+            />
+
+            {/* Protected routes with nested structure */}
+            <Route
+              path="/dashboard"
+              element={
+                <RouteGuard>
+                  <DashboardPage />
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/library"
+              element={
+                <RouteGuard>
+                  <LibraryPage />
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/users"
+              element={
+                <RouteGuard>
+                  <UsersPage />
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/statistics"
+              element={
+                <RouteGuard>
+                  <StatisticsPage />
+                </RouteGuard>
+              }
+            />
+
+            <Route
+              path="/settings"
+              element={
+                <RouteGuard>
+                  <SettingsPage />
+                </RouteGuard>
+              }
+            />
+
+            {/* Redirect root to dashboard or login */}
+            <Route
+              path="/"
+              element={
+                <Navigate
+                  to={isAuthenticated ? "/dashboard" : "/login"}
+                  replace
+                />
+              }
+            />
+
+            {/* 404 page */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </Router>
+  );
 }
 
-export default App
+export default App;

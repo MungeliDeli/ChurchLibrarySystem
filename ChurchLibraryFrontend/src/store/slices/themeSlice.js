@@ -1,13 +1,40 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { THEMES } from "../../utils/constants";
+import storageService from "../../services/storageService";
+
+// Get initial theme from localStorage if available
+const getInitialTheme = () => {
+  if (typeof window !== "undefined") {
+    const storedTheme = localStorage.getItem("theme");
+    if (storedTheme && Object.values(THEMES).includes(storedTheme)) {
+      return storedTheme;
+    }
+  }
+  return THEMES.LIGHT;
+};
+
+// Get initial sidebar state from localStorage if available
+const getInitialSidebarState = () => {
+  if (typeof window !== "undefined") {
+    const storedState = localStorage.getItem("sidebar_state");
+    if (storedState !== null) {
+      try {
+        return JSON.parse(storedState);
+      } catch (e) {
+        return false;
+      }
+    }
+  }
+  return false;
+};
 
 // Initial state
 const initialState = {
-  currentTheme: THEMES.LIGHT,
+  currentTheme: getInitialTheme(),
   systemTheme: THEMES.LIGHT, // Current system theme preference
   availableThemes: Object.values(THEMES),
-  isDarkMode: false,
-  sidebarCollapsed: false,
+  isDarkMode: getInitialTheme() === THEMES.DARK,
+  sidebarCollapsed: getInitialSidebarState(), // Load from localStorage
   sidebarWidth: 256, // Default sidebar width
   headerHeight: 64, // Default header height
   contentPadding: 24, // Default content padding
@@ -37,6 +64,8 @@ const themeSlice = createSlice({
       if (state.availableThemes.includes(newTheme)) {
         state.currentTheme = newTheme;
         state.isDarkMode = newTheme === THEMES.DARK;
+        // Save to localStorage
+        storageService.setTheme(newTheme);
       }
     },
 
@@ -45,9 +74,13 @@ const themeSlice = createSlice({
       if (state.currentTheme === THEMES.LIGHT) {
         state.currentTheme = THEMES.DARK;
         state.isDarkMode = true;
+        // Save to localStorage
+        storageService.setTheme(THEMES.DARK);
       } else if (state.currentTheme === THEMES.DARK) {
         state.currentTheme = THEMES.LIGHT;
         state.isDarkMode = false;
+        // Save to localStorage
+        storageService.setTheme(THEMES.LIGHT);
       }
       // SYSTEM theme is handled by the system theme detection
     },
@@ -64,11 +97,15 @@ const themeSlice = createSlice({
     // Toggle sidebar (renamed to avoid conflict)
     toggleThemeSidebar: (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
+      // Save sidebar state to localStorage
+      storageService.setSidebarState(state.sidebarCollapsed);
     },
 
     // Set sidebar state
     setSidebarCollapsed: (state, action) => {
       state.sidebarCollapsed = action.payload;
+      // Save sidebar state to localStorage
+      storageService.setSidebarState(action.payload);
     },
 
     // Set sidebar width
@@ -94,6 +131,9 @@ const themeSlice = createSlice({
       state.sidebarWidth = 256;
       state.headerHeight = 64;
       state.contentPadding = 24;
+      // Save to localStorage
+      storageService.setTheme(THEMES.LIGHT);
+      storageService.setSidebarState(false);
     },
 
     // Set theme from storage (for persistence)

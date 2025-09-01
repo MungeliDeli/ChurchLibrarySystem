@@ -9,6 +9,7 @@ import {
 } from "../../store";
 import { useNavigation } from "../../hooks/useNavigation";
 import { ROUTES } from "../../services/navigationService";
+import splashIcon from "../../assets/splash-icon.png";
 
 const Sidebar = ({ isOpen }) => {
   const location = useLocation();
@@ -59,19 +60,18 @@ const Sidebar = ({ isOpen }) => {
     "fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out",
     "bg-white border-r border-gray-200",
     isDarkMode && "bg-gray-800 border-gray-700",
-    isOpen ? "w-64 translate-x-0" : "w-16 -translate-x-0",
-    sidebarCollapsed && "w-16"
+    isOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full"
   );
 
   const headerClasses = clsx(
     "flex items-center justify-center h-16 border-b border-gray-200 transition-all duration-300",
     isDarkMode && "border-gray-700 bg-gray-900",
-    sidebarCollapsed ? "px-2" : "px-4"
+    "px-4"
   );
 
   const logoClasses = clsx(
-    "font-bold transition-all duration-300",
-    sidebarCollapsed ? "text-lg" : "text-xl",
+    "font-bold transition-all duration-300 flex items-center space-x-2",
+    "text-xl",
     isDarkMode ? "text-white" : "text-gray-900"
   );
 
@@ -80,7 +80,8 @@ const Sidebar = ({ isOpen }) => {
       {/* Header */}
       <div className={headerClasses}>
         <h1 className={logoClasses}>
-          {sidebarCollapsed ? "CL" : "Church Library"}
+          <img src={splashIcon} alt="Church Library" className="w-8 h-8" />
+          <span>Church Library</span>
         </h1>
       </div>
 
@@ -110,12 +111,10 @@ const Sidebar = ({ isOpen }) => {
                           isDarkMode && "text-gray-300 hover:text-white"
                         )
                   )}
-                  title={sidebarCollapsed ? item.description : undefined}
+                  title={item.description}
                 >
                   <span className="text-lg mr-3">{item.icon}</span>
-                  {!sidebarCollapsed && (
-                    <span className="truncate">{item.name}</span>
-                  )}
+                  <span className="truncate">{item.name}</span>
                 </Link>
               </li>
             );
@@ -124,7 +123,7 @@ const Sidebar = ({ isOpen }) => {
       </nav>
 
       {/* User Info Section */}
-      {!sidebarCollapsed && user && (
+      {user && (
         <div
           className={clsx(
             "absolute bottom-0 left-0 right-0 p-4 border-t",

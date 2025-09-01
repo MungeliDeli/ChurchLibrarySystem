@@ -31,7 +31,7 @@ const Header = () => {
   // Check if we're on mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 640);
     };
 
     checkMobile();
@@ -65,9 +65,8 @@ const Header = () => {
 
   const headerClasses = clsx(
     "sticky top-0 z-30 transition-all duration-300 ease-in-out",
-    "bg-white border-b border-gray-200 px-6 py-4",
-    isDarkMode && "bg-gray-800 border-gray-700",
-    sidebarCollapsed ? "ml-16" : "ml-64"
+    "bg-white border-b border-gray-200 px-4 py-2",
+    isDarkMode && "bg-gray-800 border-gray-700"
   );
 
   const buttonClasses = clsx(
@@ -94,8 +93,8 @@ const Header = () => {
       <header className={headerClasses}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            {/* Sidebar Toggle - Only show on mobile or when sidebar is collapsed */}
-            {(isMobile || sidebarCollapsed) && (
+            {/* Sidebar Toggle - Only show on mobile */}
+            {isMobile && (
               <SidebarToggle showOnMobile={true} showOnDesktop={false} />
             )}
 
@@ -106,52 +105,6 @@ const Header = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Back Button - Only show if there's navigation history */}
-            {navigationHistory.length > 1 && (
-              <button
-                onClick={handleGoBack}
-                className={buttonClasses}
-                title="Go back"
-              >
-                <span className="sr-only">Go back</span>
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-            )}
-
-            {/* Navigation History */}
-            <button
-              onClick={() => setShowNavigationHistory(true)}
-              className={buttonClasses}
-              title="Navigation history"
-            >
-              <span className="sr-only">Navigation history</span>
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </button>
-
             {/* Theme Toggle */}
             <button
               onClick={handleThemeToggle}
@@ -205,11 +158,9 @@ const Header = () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M15 17h5l-5 5v-5zM4.19 4.19A4 4 0 004 8v6a4 4 0 004 4h6a4 4 0 004-4V8a4 4 0 00-4-4H8a4 4 0 00-2.81 1.19z"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                 />
               </svg>
-              {/* Notification badge */}
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
             </button>
 
             {/* Profile Dropdown */}
@@ -218,42 +169,32 @@ const Header = () => {
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className={profileButtonClasses}
               >
+                {/* Profile Picture Circle */}
                 <div
                   className={clsx(
-                    "h-8 w-8 rounded-full flex items-center justify-center",
-                    "bg-blue-600 text-white"
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                    isDarkMode
+                      ? "bg-gray-700 text-white"
+                      : "bg-gray-300 text-gray-700"
                   )}
                 >
-                  <span className="text-sm font-medium">
-                    {getUserInitials(user?.name || user?.email)}
-                  </span>
+                  {getUserInitials(user?.name || user?.email)}
                 </div>
 
-                {!isMobile && (
-                  <>
-                    <span
-                      className={clsx(
-                        "text-sm font-medium",
-                        isDarkMode ? "text-white" : "text-gray-700"
-                      )}
-                    >
-                      {user?.name || user?.email || "User"}
-                    </span>
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </>
-                )}
+                {/* Dropdown Arrow */}
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
               </button>
 
               {/* Profile Dropdown Menu */}

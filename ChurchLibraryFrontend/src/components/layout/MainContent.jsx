@@ -1,10 +1,9 @@
 import React from "react";
 import { clsx } from "clsx";
 import { useSelector } from "react-redux";
-import { selectSidebarCollapsed, selectIsDarkMode } from "../../store";
+import { selectIsDarkMode } from "../../store";
 
 const MainContent = ({ children, className = "", padding = "default" }) => {
-  const sidebarCollapsed = useSelector(selectSidebarCollapsed);
   const isDarkMode = useSelector(selectIsDarkMode);
 
   const paddingClasses = {

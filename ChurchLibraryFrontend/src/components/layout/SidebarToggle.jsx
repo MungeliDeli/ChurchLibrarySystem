@@ -25,8 +25,8 @@ const SidebarToggle = ({
     "text-gray-400 hover:text-gray-500 hover:bg-gray-100",
     isDarkMode && "hover:bg-gray-700 hover:text-gray-300 focus:ring-blue-400",
     "focus:ring-blue-500",
-    "md:hidden", // Hidden on desktop by default
-    showOnDesktop && "md:block", // Show on desktop if specified
+    "sm:hidden", // Hidden on desktop by default (above 640px)
+    showOnDesktop && "sm:block", // Show on desktop if specified
     className
   );
 
@@ -34,41 +34,24 @@ const SidebarToggle = ({
     <button
       onClick={handleToggle}
       className={buttonClasses}
-      title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      title="Toggle mobile menu"
+      aria-label="Toggle mobile menu"
     >
-      <span className="sr-only">Toggle sidebar</span>
-      {sidebarCollapsed ? (
-        // Expand icon
-        <svg
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      ) : (
-        // Collapse icon
-        <svg
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      )}
+      <span className="sr-only">Toggle mobile menu</span>
+      {/* Hamburger icon */}
+      <svg
+        className="h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      </svg>
     </button>
   );
 };

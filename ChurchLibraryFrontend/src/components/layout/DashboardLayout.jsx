@@ -8,7 +8,6 @@ import {
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import MainContent from "./MainContent";
-import Footer from "./Footer";
 import MobileMenu from "./MobileMenu";
 import { clsx } from "clsx";
 
@@ -18,10 +17,10 @@ const DashboardLayout = ({ children }) => {
   const isDarkMode = useSelector(selectIsDarkMode);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Check if we're on mobile
+  // Check if we're on mobile (below 640px)
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 640);
     };
 
     checkMobile();
@@ -40,15 +39,13 @@ const DashboardLayout = ({ children }) => {
     "transition-all duration-300 ease-in-out",
     isMobile
       ? "ml-0" // Full width on mobile
-      : sidebarCollapsed
-      ? `ml-16` // Collapsed sidebar width
-      : `ml-${sidebarWidth / 4}` // Full sidebar width (convert px to Tailwind units)
+      : "ml-64" // Always give space for sidebar on desktop
   );
 
   return (
     <div className={layoutClasses}>
-      {/* Desktop Sidebar */}
-      <Sidebar isOpen={!sidebarCollapsed && !isMobile} />
+      {/* Desktop Sidebar - Always show on desktop, hide on mobile */}
+      {!isMobile && <Sidebar isOpen={true} />}
 
       {/* Mobile Menu */}
       <MobileMenu />
@@ -57,13 +54,12 @@ const DashboardLayout = ({ children }) => {
       <div className={contentWrapperClasses}>
         <Header />
         <MainContent>{children}</MainContent>
-        <Footer />
       </div>
 
       {/* Mobile Overlay */}
       {isMobile && !sidebarCollapsed && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden"
           onClick={() => {
             /* Close sidebar on mobile */
           }}

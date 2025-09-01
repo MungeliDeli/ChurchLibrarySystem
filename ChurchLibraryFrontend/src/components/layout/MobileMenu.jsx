@@ -49,7 +49,7 @@ const MobileMenu = () => {
   if (sidebarCollapsed) return null;
 
   return (
-    <div className="lg:hidden">
+    <div className="sm:hidden">
       {/* Mobile menu overlay */}
       <div
         className="fixed inset-0 bg-black bg-opacity-50 z-40"

@@ -5,6 +5,7 @@ import {
   setThemeFromStorage,
   detectSystemTheme,
   selectIsAuthenticated,
+  selectIsDarkMode,
   refreshUser,
 } from "../../store";
 import storageService from "../../services/storageService";
@@ -12,6 +13,18 @@ import storageService from "../../services/storageService";
 const AppInitializer = ({ children }) => {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isDarkMode = useSelector(selectIsDarkMode);
+
+  // Apply theme to document body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.classList.remove("dark");
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";

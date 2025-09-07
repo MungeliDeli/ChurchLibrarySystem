@@ -1,0 +1,35 @@
+{
+  "name": "churchlibrarybackend",
+  "version": "1.0.0",
+  "description": "\"Backend File Structure\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MungeliDeli/ChurchLibrarySystem.git"
+  },
+  "author": "Group C",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MungeliDeli/ChurchLibrarySystem/issues"
+  },
+  "homepage": "https://github.com/MungeliDeli/ChurchLibrarySystem#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3",
+    "sequelize": "^6.37.7"
+  },
+  "devDependencies": {
+    "eslint": "^9.35.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "sequelize-cli": "^6.6.3"
+  }
+}

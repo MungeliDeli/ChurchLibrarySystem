@@ -25,7 +25,7 @@ const Card = ({
   return (
     <div
       className={clsx(
-        "bg-white rounded-lg border border-gray-200",
+        "bg-[] rounded-lg border border-gray-200",
         paddingClasses[padding],
         shadowClasses[shadow],
         className

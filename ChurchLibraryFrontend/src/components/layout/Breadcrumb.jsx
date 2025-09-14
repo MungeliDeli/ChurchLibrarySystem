@@ -21,16 +21,15 @@ const Breadcrumb = () => {
     <nav className="flex" aria-label="Breadcrumb">
       <ol
         className={clsx(
-          "flex items-center space-x-2 text-sm",
-          isDarkMode ? "text-gray-300" : "text-gray-600"
+          "flex items-center space-x-2 text-sm text-[var(--color-text-secondary)]"
         )}
       >
         <li>
           <Link
             to="/dashboard"
             className={clsx(
-              "hover:text-blue-600 transition-colors duration-200",
-              isDarkMode && "hover:text-blue-400"
+              "hover:text-[var(--color-text-primary)] transition-colors duration-200",
+              
             )}
           >
             Home
@@ -41,8 +40,7 @@ const Breadcrumb = () => {
           <li key={breadcrumb.path} className="flex items-center">
             <span
               className={clsx(
-                "mx-2",
-                isDarkMode ? "text-gray-500" : "text-gray-400"
+                "mx-2 text-[var(--color-text-secondary)]"
               )}
             >
               /
@@ -51,8 +49,8 @@ const Breadcrumb = () => {
             {breadcrumb.isLast ? (
               <span
                 className={clsx(
-                  "font-medium",
-                  isDarkMode ? "text-white" : "text-gray-900"
+                  "font-medium text-[var(--color-text-primary)]",
+             
                 )}
               >
                 {breadcrumb.title}
@@ -61,8 +59,8 @@ const Breadcrumb = () => {
               <Link
                 to={breadcrumb.path}
                 className={clsx(
-                  "hover:text-blue-600 transition-colors duration-200",
-                  isDarkMode && "hover:text-blue-400"
+                  "hover:text-[var(--color-text-primary)] transition-colors duration-200",
+                  
                 )}
               >
                 {breadcrumb.title}

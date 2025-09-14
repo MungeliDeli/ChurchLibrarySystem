@@ -88,24 +88,6 @@ export const AuthProvider = ({ children }) => {
     };
   }, [error, dispatch]);
 
-  // Check if user has specific role
-  const hasRole = (role) => {
-    return user?.role === role;
-  };
-
-  // Check if user has specific permission
-  const hasPermission = (permission) => {
-    if (!user?.permissions) return false;
-    return user.permissions.includes(permission);
-  };
-
-  // Check if user can access specific resource
-  const canAccess = (resource, action = "read") => {
-    if (!user?.permissions) return false;
-
-    const permission = `${resource}:${action}`;
-    return user.permissions.includes(permission);
-  };
 
   // Extend session (reset timeout)
   const extendSession = () => {
@@ -153,9 +135,6 @@ export const AuthProvider = ({ children }) => {
     isInitialized,
 
     // Methods
-    hasRole,
-    hasPermission,
-    canAccess,
     extendSession,
     getUserDisplayName,
     getUserAvatar,

@@ -4,6 +4,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import Button from "../common/Button";
 import Card from "../common/Card";
+import LoadingSpinner from "../common/LoadingSpinner";
 import { clsx } from "clsx";
 
 const schema = yup
@@ -35,19 +36,19 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
   };
 
   return (
-    <Card className="max-w-md w-full mx-auto">
+    <Card className="max-w-md w-full mx-auto shadow-elev-2 border-faint">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-        <p className="text-gray-600 mt-2">
-          Sign in to your Church Library account
-        </p>
+        <h2 className="text-h3 font-bold text-[color:var(--color-primary)]">
+          Welcome Back
+        </h2>
+        <p className="text-h4 mt-2">Sign in to your Church Library account</p>
       </div>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-caption mb-1 text-[color:var(--color-secondary-text)]"
           >
             Email Address
           </label>
@@ -56,20 +57,23 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
             type="email"
             id="email"
             className={clsx(
-              "w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-              errors.email ? "border-red-300" : "border-gray-300"
+              "w-full px-3 py-2 border-faint rounded-md shadow-elev-1 bg-[color:var(--color-background)] text-[color:var(--color-primary-text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)] focus:border-[color:var(--color-primary)]",
+              errors.email &&
+                "border-[color:var(--color-error)] focus:ring-[color:var(--color-error)] focus:border-[color:var(--color-error)] text-[color:var(--color-error)]"
             )}
             placeholder="Enter your email"
           />
           {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            <p className="mt-1 text-caption text-[color:var(--color-error)]">
+              {errors.email.message}
+            </p>
           )}
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-caption mb-1 text-[color:var(--color-secondary-text)]"
           >
             Password
           </label>
@@ -79,19 +83,20 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
               type={showPassword ? "text" : "password"}
               id="password"
               className={clsx(
-                "w-full px-3 py-2 pr-10 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                errors.password ? "border-red-300" : "border-gray-300"
+                "w-full px-3 py-2 pr-10 border-faint rounded-md shadow-elev-1 bg-[color:var(--color-background)] text-[color:var(--color-primary-text)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)] focus:border-[color:var(--color-primary)]",
+                errors.password &&
+                  "border-[color:var(--color-error)] focus:ring-[color:var(--color-error)] focus:border-[color:var(--color-error)] text-[color:var(--color-error)]"
               )}
               placeholder="Enter your password"
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-[color:var(--color-secondary-text)]"
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
                 <svg
-                  className="h-5 w-5 text-gray-400"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -105,7 +110,7 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
                 </svg>
               ) : (
                 <svg
-                  className="h-5 w-5 text-gray-400"
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -127,7 +132,7 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-red-600">
+            <p className="mt-1 text-caption text-[color:var(--color-error)]">
               {errors.password.message}
             </p>
           )}
@@ -141,7 +146,14 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
           disabled={isLoading}
           className="mt-6"
         >
-          {isLoading ? "Signing In..." : "Sign In"}
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <LoadingSpinner size="small" color="white" />
+              <span>Signing In...</span>
+            </div>
+          ) : (
+            "Sign In"
+          )}
         </Button>
       </form>
     </Card>

@@ -6,10 +6,10 @@ const DashboardPage = () => {
     <DashboardLayout>
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
             This is the Dashboard page
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-[var(--color-text-secondary)]">
             Dashboard content will be implemented here
           </p>
         </div>

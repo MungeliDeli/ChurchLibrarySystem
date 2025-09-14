@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { authAPI } from "../../services/api";
 import storageService from "../../services/storageService";
+import DEV_CREDENTIALS, { DEV_USER } from "../../services/devCredentials";
+import { isFeatureEnabled } from "../../config/environment";
 
 // Initial state
 const initialState = {
@@ -18,6 +20,7 @@ export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async (credentials, { rejectWithValue }) => {
     try {
+      // Try normal API login first
       const response = await authAPI.login(credentials);
       const { user, token, refreshToken } = response.data;
 
@@ -29,6 +32,22 @@ export const loginUser = createAsyncThunk(
 
       return { user, token, refreshToken };
     } catch (error) {
+      // If API login fails and mock mode is enabled, try local dev credentials
+      const allowMock = isFeatureEnabled("mockData");
+      const matchesDev =
+        credentials?.email === DEV_CREDENTIALS.email &&
+        credentials?.password === DEV_CREDENTIALS.password;
+
+      if (allowMock && matchesDev) {
+        // Issue a temporary token and persist minimal auth data
+        const token = "dev-temp-token";
+        const refreshToken = "dev-temp-refresh";
+        storageService.setAuthToken(token);
+        storageService.setRefreshToken(refreshToken);
+        storageService.setUserData(DEV_USER);
+        return { user: DEV_USER, token, refreshToken };
+      }
+
       return rejectWithValue(error.response?.data?.message || "Login failed");
     }
   }

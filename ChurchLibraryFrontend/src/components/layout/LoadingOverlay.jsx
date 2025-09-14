@@ -21,13 +21,13 @@ const LoadingOverlay = ({
   );
 
   const contentClasses = clsx(
-    "bg-white rounded-lg shadow-xl p-8 flex flex-col items-center space-y-4",
-    isDarkMode && "bg-gray-800"
+    "bg-[var(--color-background)] rounded-lg shadow-xl p-8 flex flex-col items-center space-y-4",
+  
   );
 
   const messageClasses = clsx(
-    "text-lg font-medium",
-    isDarkMode ? "text-white" : "text-gray-900"
+    "text-lg font-medium text-[var(--color-text-primary)]",
+   
   );
 
   return (

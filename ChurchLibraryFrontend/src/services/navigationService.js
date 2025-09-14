@@ -20,14 +20,7 @@ export const ROUTES = {
   NOT_FOUND: "/404",
 };
 
-// Role-based route access
-export const ROUTE_PERMISSIONS = {
-  [ROUTES.DASHBOARD]: ["admin", "librarian", "user"],
-  [ROUTES.LIBRARY]: ["admin", "librarian"],
-  [ROUTES.USERS]: ["admin"],
-  [ROUTES.STATISTICS]: ["admin", "librarian"],
-  [ROUTES.SETTINGS]: ["admin", "librarian", "user"],
-};
+// All routes accessible to all authenticated users (admin panel)
 
 // Navigation service class
 class NavigationService {
@@ -68,8 +61,7 @@ class NavigationService {
 
   // Check if user can access route
   canAccessRoute(route, userRole) {
-    const allowedRoles = ROUTE_PERMISSIONS[route];
-    return allowedRoles ? allowedRoles.includes(userRole) : true;
+    return true; // All routes accessible to authenticated users
   }
 
   // Navigate with validation
@@ -82,13 +74,6 @@ class NavigationService {
       showToast = true,
     } = options;
 
-    // Validate route access if required
-    if (validateAccess && userRole && !this.canAccessRoute(route, userRole)) {
-      if (showToast) {
-        toast.error("You don't have permission to access this page.");
-      }
-      return false;
-    }
 
     // Add to history if not replacing
     if (!replace) {

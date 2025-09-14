@@ -31,8 +31,7 @@ const DashboardLayout = ({ children }) => {
 
   const layoutClasses = clsx(
     "min-h-screen transition-all duration-300 ease-in-out",
-    "bg-gray-50",
-    isDarkMode && "bg-gray-900"
+    "bg-[var(--color-background)]",
   );
 
   const contentWrapperClasses = clsx(

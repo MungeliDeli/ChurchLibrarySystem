@@ -16,8 +16,8 @@ const MainContent = ({ children, className = "", padding = "default" }) => {
   const contentClasses = clsx(
     "min-h-screen transition-all duration-300 ease-in-out",
     paddingClasses[padding],
-    "bg-gray-50",
-    isDarkMode && "bg-gray-900",
+    "bg-[var(--color-background)]",
+   
     className
   );
 

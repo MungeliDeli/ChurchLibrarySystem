@@ -3,6 +3,13 @@ import { useSelector, useDispatch } from "react-redux";
 import { toggleThemeSidebar } from "../../store/slices/themeSlice";
 import { Link, useLocation } from "react-router-dom";
 import { clsx } from "clsx";
+import {
+  MdDashboard,
+  MdLibraryBooks,
+  MdPeople,
+  MdBarChart,
+  MdSettings,
+} from "react-icons/md";
 
 const MobileMenu = () => {
   const dispatch = useDispatch();
@@ -13,31 +20,31 @@ const MobileMenu = () => {
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: "📊",
+      icon: MdDashboard,
       description: "Overview and statistics",
     },
     {
       name: "Library",
       href: "/dashboard/library",
-      icon: "📚",
+      icon: MdLibraryBooks,
       description: "Manage books and resources",
     },
     {
       name: "Users",
       href: "/dashboard/users",
-      icon: "👥",
+      icon: MdPeople,
       description: "User management",
     },
     {
       name: "Statistics",
       href: "/dashboard/statistics",
-      icon: "📈",
+      icon: MdBarChart,
       description: "Analytics and reports",
     },
     {
       name: "Settings",
       href: "/dashboard/settings",
-      icon: "⚙️",
+      icon: MdSettings,
       description: "Application settings",
     },
   ];
@@ -57,16 +64,16 @@ const MobileMenu = () => {
       />
 
       {/* Mobile menu panel */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-background)] shadow-xl transform transition-transform duration-300 ease-in-out">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
               Church Library
             </h2>
             <button
               onClick={handleClose}
-              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              className="p-2 rounded-md text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]"
             >
               <svg
                 className="h-6 w-6"
@@ -96,14 +103,14 @@ const MobileMenu = () => {
                   className={clsx(
                     "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)]"
+                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
                   )}
                 >
-                  <span className="mr-3 text-lg">{item.icon}</span>
+                  <item.icon className="mr-3 text-lg text-[var(--color-primary)]" />
                   <div>
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-[var(--color-text-secondary)]">
                       {item.description}
                     </div>
                   </div>
@@ -113,8 +120,8 @@ const MobileMenu = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="text-xs text-gray-500 text-center">
+          <div className="p-4 border-t border-[var(--color-border)]">
+            <div className="text-xs text-[var(--color-text-secondary)] text-center">
               Church Library Admin
             </div>
           </div>

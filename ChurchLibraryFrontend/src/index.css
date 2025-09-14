@@ -1,0 +1,125 @@
+/* Google Fonts and Material Icons */
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons");
+
+/* Tailwind */
+@import "tailwindcss";
+
+/* index.css
+   This file contains the global CSS styles and theme variables for the church app.
+   It sets up color schemes, dark mode, and base styles using Tailwind CSS and custom properties.
+*/
+
+/* Theme layer for custom properties */
+@layer theme {
+  :root {
+    --color-primary: #d4a373; /* #007A20 */
+    --color-error: #ff0000;
+    --color-background: hsl(0, 0%, 98%); /* Light mode bg */
+    --color-surface: #efefef; /* Light surface (search, active, etc.) */
+    --color-accent: rgb(203, 160, 113);
+    --color-primary-text: #363636; /* Primary text color (light) */
+    --color-secondary-text: #595959; /* Secondary text color (light) */
+    --color-shadow: rgba(0, 0, 0, 0.08);
+    --color-border: rgba(0, 0, 0, 0.08);
+  }
+  .dark {
+    --color-background: #121212; /* #121212 */
+    --color-surface: hsl(0, 0%, 11%); /* Dark surface (search, active, etc.) */
+    --color-primary-text: #e0e0e0; /* Primary text color (dark) */
+    --color-secondary-text: #b0b0b0;
+    --color-shadow: hsla(
+      0,
+      0%,
+      0%,
+      0.4
+    ); /* Stronger shadow in dark for parity */
+    --color-border: hsla(0, 0%, 100%, 0.08); /* Faint border in dark */
+  }
+}
+
+/* Base styles for body */
+@layer base {
+  html {
+    font-family: "Roboto", system-ui, sans-serif;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    transition: background 0.2s, color 0.2s;
+  }
+}
+
+/* Utilities: consistent shadows, faint borders, and typography */
+@layer utilities {
+  /* Elevation */
+  .shadow-elev-1 {
+    box-shadow: 0 1px 3px 0 var(--color-shadow),
+      0 1px 2px -1px var(--color-shadow);
+  }
+  .shadow-elev-2 {
+    box-shadow: 0 4px 6px -1px var(--color-shadow),
+      0 2px 4px -2px var(--color-shadow);
+  }
+  .shadow-elev-3 {
+    box-shadow: 0 10px 15px -3px var(--color-shadow),
+      0 4px 6px -4px var(--color-shadow);
+  }
+
+  /* Faint borders */
+  .border-faint {
+    border: 1px solid var(--color-border);
+  }
+  .divide-faint > * + * {
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Typography scale (responsive via clamp) */
+  .text-display {
+    font-size: clamp(2rem, 1.2rem + 2vw, 3rem);
+    line-height: 1.15;
+    font-weight: 700;
+  }
+  .text-h1 {
+    font-size: clamp(1.75rem, 1.1rem + 1.5vw, 2.25rem);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+  .text-h2 {
+    font-size: clamp(1.5rem, 1rem + 1.2vw, 1.875rem);
+    line-height: 1.25;
+    font-weight: 600;
+  }
+  .text-h3 {
+    font-size: clamp(1.25rem, 0.95rem + 0.8vw, 1.5rem);
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .text-h4 {
+    font-size: clamp(0.8rem, 0.5rem + 0.5vw, 1.25rem);
+    line-height: 1.35;
+  }
+  .text-subheading {
+    font-size: clamp(1.125rem, 0.9rem + 0.5vw, 1.25rem);
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--color-secondary-text);
+  }
+  .text-body {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .text-caption {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+}
+
+/* Hide horizontal scrollbar but allow scrolling */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

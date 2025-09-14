@@ -6,7 +6,7 @@ import { store, persistor } from "./store";
 import { AuthProvider } from "./contexts/AuthContext";
 import AppInitializer from "./components/common/AppInitializer";
 import App from "./App.jsx";
-import "./styles/index.css";
+import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

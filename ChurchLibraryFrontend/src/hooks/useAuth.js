@@ -76,22 +76,7 @@ export const useAuth = () => {
     [dispatch]
   );
 
-  // Check if user has specific role
-  const hasRole = useCallback(
-    (role) => {
-      return user?.role === role;
-    },
-    [user]
-  );
-
-  // Check if user has permission
-  const hasPermission = useCallback(
-    (permission) => {
-      if (!user?.permissions) return false;
-      return user.permissions.includes(permission);
-    },
-    [user]
-  );
+  
 
   return {
     // State
@@ -109,7 +94,5 @@ export const useAuth = () => {
     updateProfile,
 
     // Utilities
-    hasRole,
-    hasPermission,
   };
 };

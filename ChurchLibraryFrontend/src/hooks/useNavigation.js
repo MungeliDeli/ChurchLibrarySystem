@@ -108,12 +108,9 @@ export const useNavigation = () => {
   );
 
   // Check if user can access route
-  const canAccessRoute = useCallback(
-    (route) => {
-      return navigationService.canAccessRoute(route, user?.role);
-    },
-    [user?.role]
-  );
+  const canAccessRoute = useCallback((route) => {
+    return true; // All authenticated users have access
+  }, []);
 
   // Get breadcrumbs for current route
   const getBreadcrumbs = useCallback(() => {

@@ -27,8 +27,6 @@ const AppInitializer = ({ children }) => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    const BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === "true";
-
     // Initialize theme from storage
     const storedTheme = storageService.getTheme();
     const storedSidebarState = storageService.getSidebarState();
@@ -45,32 +43,6 @@ const AppInitializer = ({ children }) => {
 
     // Detect system theme
     dispatch(detectSystemTheme());
-
-    // Development-only auth bypass
-    if (BYPASS_AUTH && !isAuthenticated) {
-      const mockUser = {
-        id: "dev-user-1",
-        name: "Dev Admin",
-        email: "dev@churchlibrary.local",
-        role: "admin",
-      };
-      const mockToken = "dev-mock-token";
-
-      storageService.setAuthToken(mockToken);
-      storageService.setUserData(mockUser);
-      storageService.setRefreshToken("dev-mock-refresh-token");
-
-      dispatch(
-        setAuthFromStorage({
-          token: mockToken,
-          user: mockUser,
-          refreshToken: "dev-mock-refresh-token",
-        })
-      );
-
-      // Skip refresh when bypassing auth
-      return;
-    }
 
     // Initialize auth from storage if not already authenticated
     if (!isAuthenticated) {
@@ -96,7 +68,7 @@ const AppInitializer = ({ children }) => {
 
     // Set up system theme change listener
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleThemeChange = (e) => {
+    const handleThemeChange = () => {
       dispatch(detectSystemTheme());
     };
 

@@ -15,7 +15,6 @@ import { toast } from "react-hot-toast";
 const RouteGuard = ({
   children,
   requireAuth = true,
-  requiredRoles = [],
   redirectTo = "/login",
   fallback = null,
   onUnauthorized = null,
@@ -52,21 +51,10 @@ const RouteGuard = ({
     checkAuthentication();
   }, [requireAuth, token, isAuthenticated, dispatch]);
 
-  // Check role-based access
-  const hasRequiredRole = () => {
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
+  // All authenticated users have access (admin panel)
 
-    if (!user || !user.role) {
-      return false;
-    }
-
-    return requiredRoles.includes(user.role);
-  };
-
-  // Show loading spinner while checking authentication
-  if (isLoading || isCheckingAuth) {
+  // Show loading spinner while checking authentication (but not during login)
+  if (isCheckingAuth) {
     return fallback || <LoadingSpinner />;
   }
 
@@ -83,12 +71,6 @@ const RouteGuard = ({
 
   // If authentication is not required but user is authenticated, redirect to dashboard
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Check role-based access control
-  if (requireAuth && !hasRequiredRole()) {
-    toast.error("You don't have permission to access this page.");
     return <Navigate to="/dashboard" replace />;
   }
 

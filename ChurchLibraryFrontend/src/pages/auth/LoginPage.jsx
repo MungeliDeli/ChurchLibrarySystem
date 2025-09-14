@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import { clearError } from "../../store";
 import { useAuth } from "../../hooks/useAuth";
 import LoginForm from "../../components/auth/LoginForm";
+import splashIcon from "../../assets/splash-icon.png";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -33,19 +34,26 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Church Library</h1>
-          <p className="mt-2 text-sm text-gray-600">Admin Dashboard</p>
+          <img
+            src={splashIcon}
+            alt="Church Library"
+            className="w-16 h-16 mx-auto mb-3"
+          />
+          <h1 className="text-h2 text-[var(--color-primary-text)] font-bold">
+            Church Library
+          </h1>
+          <p className="mt-2 text-subheading">Admin Dashboard</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md p-4">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg
-                  className="h-5 w-5 text-red-400"
+                  className="h-5 w-5 text-[var(--color-error)]"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -57,7 +65,7 @@ const LoginPage = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm text-red-800">{error}</p>
+                <p className="text-sm text-[var(--color-error)]">{error}</p>
               </div>
             </div>
           </div>

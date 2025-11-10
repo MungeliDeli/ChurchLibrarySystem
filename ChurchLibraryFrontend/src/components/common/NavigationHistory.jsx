@@ -1,12 +1,9 @@
 import React, { useState } from "react";
 import { clsx } from "clsx";
-import { useSelector } from "react-redux";
-import { selectIsDarkMode } from "../../store";
 import { useNavigation } from "../../hooks/useNavigation";
 import { formatDistanceToNow } from "date-fns";
 
 const NavigationHistory = ({ isOpen, onClose }) => {
-  const isDarkMode = useSelector(selectIsDarkMode);
   const { navigationHistory, goBack, clearHistory } = useNavigation();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -34,27 +31,24 @@ const NavigationHistory = ({ isOpen, onClose }) => {
     <div
       className={clsx(
         "fixed inset-0 z-50 flex items-center justify-center",
-        "bg-black bg-opacity-50"
+        "bg-[var(--color-overlay)]"
       )}
     >
       <div
         className={clsx(
           "w-full max-w-md mx-4 rounded-lg shadow-xl",
-          "bg-white border border-gray-200",
-          isDarkMode && "bg-gray-800 border-gray-700"
+          "bg-[var(--color-surface)] border border-[var(--color-border)]"
         )}
       >
         {/* Header */}
         <div
           className={clsx(
-            "flex items-center justify-between p-4 border-b",
-            isDarkMode ? "border-gray-700" : "border-gray-200"
+            "flex items-center justify-between p-4 border-b border-[var(--color-border)]"
           )}
         >
           <h3
             className={clsx(
-              "text-lg font-medium",
-              isDarkMode ? "text-white" : "text-gray-900"
+              "text-lg font-medium text-[var(--color-primary-text)]"
             )}
           >
             Navigation History
@@ -62,11 +56,10 @@ const NavigationHistory = ({ isOpen, onClose }) => {
           <button
             onClick={onClose}
             className={clsx(
-              "p-1 rounded-md hover:bg-gray-100 transition-colors",
-              isDarkMode && "hover:bg-gray-700"
+              "p-1 rounded-md hover:bg-[var(--color-surface-hover)] transition-colors text-[var(--color-icon-muted)]"
             )}
           >
-            <span className="text-xl">×</span>
+            <span className="text-xl text-[var(--color-primary-text)]">×</span>
           </button>
         </div>
 
@@ -75,8 +68,7 @@ const NavigationHistory = ({ isOpen, onClose }) => {
           {recentHistory.length === 0 ? (
             <p
               className={clsx(
-                "text-center py-8",
-                isDarkMode ? "text-gray-400" : "text-gray-500"
+                "text-center py-8 text-[var(--color-secondary-text)]"
               )}
             >
               No navigation history available
@@ -88,37 +80,30 @@ const NavigationHistory = ({ isOpen, onClose }) => {
                   key={`${entry.path}-${entry.timestamp}`}
                   className={clsx(
                     "flex items-center justify-between p-3 rounded-lg cursor-pointer",
-                    "hover:bg-gray-50 transition-colors",
-                    isDarkMode && "hover:bg-gray-700",
+                    "hover:bg-[var(--color-surface-hover)] transition-colors",
                     index === 0 &&
-                      clsx(
-                        "bg-blue-50 border border-blue-200",
-                        isDarkMode && "bg-blue-900 border-blue-700"
-                      )
+                      "bg-[var(--color-primary-surface)] border border-[var(--color-primary-border)]"
                   )}
                   onClick={() => handleGoBack(index)}
                 >
                   <div className="flex-1 min-w-0">
                     <p
                       className={clsx(
-                        "text-sm font-medium truncate",
-                        isDarkMode ? "text-white" : "text-gray-900"
+                        "text-sm font-medium truncate text-[var(--color-primary-text)]"
                       )}
                     >
                       {entry.title || entry.path}
                     </p>
                     <p
                       className={clsx(
-                        "text-xs truncate",
-                        isDarkMode ? "text-gray-400" : "text-gray-500"
+                        "text-xs truncate text-[var(--color-secondary-text)]"
                       )}
                     >
                       {entry.path}
                     </p>
                     <p
                       className={clsx(
-                        "text-xs",
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
+                        "text-xs text-[var(--color-secondary-text)]"
                       )}
                     >
                       {formatDistanceToNow(entry.timestamp, {
@@ -130,8 +115,7 @@ const NavigationHistory = ({ isOpen, onClose }) => {
                     <span
                       className={clsx(
                         "text-xs px-2 py-1 rounded-full",
-                        "bg-blue-100 text-blue-800",
-                        isDarkMode && "bg-blue-800 text-blue-200"
+                        "bg-[var(--color-primary-surface)] text-[var(--color-primary)]"
                       )}
                     >
                       Current
@@ -147,9 +131,8 @@ const NavigationHistory = ({ isOpen, onClose }) => {
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className={clsx(
-                "w-full mt-4 py-2 text-sm font-medium rounded-lg",
-                "hover:bg-gray-100 transition-colors",
-                isDarkMode && "hover:bg-gray-700"
+                "w-full mt-4 py-2 text-sm font-medium rounded-lg text-[var(--color-primary-text)]",
+                "hover:bg-[var(--color-surface-hover)] transition-colors"
               )}
             >
               {isExpanded
@@ -162,14 +145,12 @@ const NavigationHistory = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div
           className={clsx(
-            "flex items-center justify-between p-4 border-t",
-            isDarkMode ? "border-gray-700" : "border-gray-200"
+            "flex items-center justify-between p-4 border-t border-[var(--color-border)]"
           )}
         >
           <span
             className={clsx(
-              "text-sm",
-              isDarkMode ? "text-gray-400" : "text-gray-500"
+              "text-sm text-[var(--color-secondary-text)]"
             )}
           >
             {navigationHistory.length} entries
@@ -177,9 +158,8 @@ const NavigationHistory = ({ isOpen, onClose }) => {
           <button
             onClick={handleClearHistory}
             className={clsx(
-              "px-3 py-1 text-sm rounded-md",
-              "text-red-600 hover:bg-red-50 transition-colors",
-              isDarkMode && "hover:bg-red-900"
+              "px-3 py-1 text-sm rounded-md text-[var(--color-error)]",
+              "hover:bg-[var(--color-error-surface)] transition-colors"
             )}
           >
             Clear History

@@ -59,7 +59,7 @@ const MobileMenu = () => {
     <div className="sm:hidden">
       {/* Mobile menu overlay */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+        className="fixed inset-0 bg-black/30 z-40"
         onClick={handleClose}
       />
 
@@ -68,12 +68,12 @@ const MobileMenu = () => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+            <h2 className="text-lg font-semibold text-[var(--color-primary-text)]">
               Church Library
             </h2>
             <button
               onClick={handleClose}
-              className="p-2 rounded-md text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)]"
+              className="p-2 rounded-md text-[var(--color-secondary-text)] hover:text-[var(--color-primary-text)] hover:bg-[var(--color-surface)]"
             >
               <svg
                 className="h-6 w-6"
@@ -103,14 +103,14 @@ const MobileMenu = () => {
                   className={clsx(
                     "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-[var(--color-surface)] text-[var(--color-text-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)]"
+                      ? "bg-[var(--color-surface)] text-[var(--color-primary-text)]"
+                      : "text-[var(--color-secondary-text)] hover:bg-[var(--color-surface)]"
                   )}
                 >
                   <item.icon className="mr-3 text-lg text-[var(--color-primary)]" />
                   <div>
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)]">
+                    <div className="text-xs text-[var(--color-secondary-text)]">
                       {item.description}
                     </div>
                   </div>
@@ -121,7 +121,7 @@ const MobileMenu = () => {
 
           {/* Footer */}
           <div className="p-4 border-t border-[var(--color-border)]">
-            <div className="text-xs text-[var(--color-text-secondary)] text-center">
+            <div className="text-xs text-[var(--color-secondary-text)] text-center">
               Church Library Admin
             </div>
           </div>

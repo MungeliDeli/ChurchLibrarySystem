@@ -15,7 +15,7 @@ const LoadingSpinner = ({
   const colorClasses = {
     blue: "text-[var(--color-primary)]",
     gray: "text-[var(--color-secondary-text)]",
-    white: "text-white",
+    white: "text-[var(--color-on-primary)]",
   };
 
   return (

@@ -26,7 +26,7 @@ const LoadingOverlay = ({
   );
 
   const messageClasses = clsx(
-    "text-lg font-medium text-[var(--color-text-primary)]",
+    "text-lg font-medium text-[var(--color-primary-text)]",
    
   );
 

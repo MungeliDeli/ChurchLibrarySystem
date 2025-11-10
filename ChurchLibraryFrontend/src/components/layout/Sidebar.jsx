@@ -104,10 +104,10 @@ const Sidebar = ({ isOpen }) => {
 
                     isActive
                       ? clsx(
-                          "bg-[var(--color-surface)] text-[var(--color-text-primary)] border-r-2 border-[var(--color-accent)]"
+                          "bg-[var(--color-surface)] text-[var(--color-primary-text)] border-r-2 border-[var(--color-accent)]"
                         )
                       : clsx(
-                          "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                          "text-[var(--color-secondary-text)] hover:text-[var(--color-primary-text)]"
                         )
                   )}
                   title={item.description}

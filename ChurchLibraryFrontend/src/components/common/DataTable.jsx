@@ -98,9 +98,13 @@ const DataTable = ({
 
   const SortIcon = ({ columnKey }) => {
     if (sortConfig.key !== columnKey) {
-      return <span className="text-gray-400">↕️</span>;
+      return <span className="text-[var(--color-icon-muted)]">↕️</span>;
     }
-    return sortConfig.direction === "asc" ? <span>↑</span> : <span>↓</span>;
+    return (
+      <span className="text-[var(--color-primary-text)]">
+        {sortConfig.direction === "asc" ? "↑" : "↓"}
+      </span>
+    );
   };
 
   return (
@@ -115,7 +119,7 @@ const DataTable = ({
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-primary-text)] placeholder:text-[var(--color-secondary-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               />
             </div>
           )}
@@ -130,7 +134,7 @@ const DataTable = ({
                     placeholder={`Filter ${col.label}...`}
                     value={filters[col.key] || ""}
                     onChange={(e) => handleFilter(col.key, e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-primary-text)] placeholder:text-[var(--color-secondary-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   />
                 ))}
             </div>
@@ -140,17 +144,17 @@ const DataTable = ({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-          <thead className="bg-gray-50">
+        <table className="min-w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg">
+          <thead className="bg-[var(--color-primary-surface)]">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider",
+                    "px-6 py-3 text-left text-xs font-medium text-[var(--color-secondary-text)] uppercase tracking-wider",
                     sortable &&
                       column.sortable !== false &&
-                      "cursor-pointer hover:bg-gray-100",
+                      "cursor-pointer hover:bg-[var(--color-surface-hover)]",
                     column.className
                   )}
                   onClick={() => handleSort(column.key)}
@@ -165,19 +169,19 @@ const DataTable = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-[var(--color-border)]">
             {loading ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
                   <LoadingSpinner size="large" />
-                  <p className="mt-2 text-gray-500">Loading data...</p>
+                  <p className="mt-2 text-[var(--color-secondary-text)]">Loading data...</p>
                 </td>
               </tr>
             ) : paginatedData.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-6 py-12 text-center text-gray-500"
+                  className="px-6 py-12 text-center text-[var(--color-secondary-text)]"
                 >
                   {emptyMessage}
                 </td>
@@ -187,7 +191,7 @@ const DataTable = ({
                 <tr
                   key={row.id || rowIndex}
                   className={clsx(
-                    "hover:bg-gray-50 transition-colors",
+                    "hover:bg-[var(--color-surface-hover)] transition-colors",
                     onRowClick && "cursor-pointer"
                   )}
                   onClick={() => onRowClick?.(row)}
@@ -196,7 +200,7 @@ const DataTable = ({
                     <td
                       key={column.key}
                       className={clsx(
-                        "px-6 py-4 whitespace-nowrap text-sm text-gray-900",
+                        "px-6 py-4 whitespace-nowrap text-sm text-[var(--color-primary-text)]",
                         column.className
                       )}
                     >
@@ -215,7 +219,7 @@ const DataTable = ({
       {/* Pagination */}
       {pagination && totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-[var(--color-secondary-text)]">
             Showing {(currentPage - 1) * pageSize + 1} to{" "}
             {Math.min(currentPage * pageSize, filteredData.length)} of{" "}
             {filteredData.length} results

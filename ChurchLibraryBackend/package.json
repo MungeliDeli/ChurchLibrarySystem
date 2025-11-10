@@ -1,46 +1,34 @@
 {
   "name": "churchlibrarybackend",
   "version": "1.0.0",
-  "description": "\"Backend File Structure\"",
-  "type": "module",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "db:migrate": "sequelize-cli db:migrate",
-    "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
-    "db:migrate:status": "sequelize-cli db:migrate:status",
-    "db:seed": "sequelize-cli db:seed:all",
-    "db:seed:undo": "sequelize-cli db:seed:undo:all",
-    "db:create": "sequelize-cli db:create",
-    "db:drop": "sequelize-cli db:drop"
+    "db:migrate": "node scripts/sequelize-cli.js db:migrate",
+    "db:migrate:undo": "node scripts/sequelize-cli.js db:migrate:undo",
+    "db:migrate:undo:all": "node scripts/sequelize-cli.js db:migrate:undo:all",
+    "db:migrate:status": "node scripts/sequelize-cli.js db:migrate:status",
+    "db:seed": "node scripts/sequelize-cli.js db:seed:all",
+    "db:seed:undo": "node scripts/sequelize-cli.js db:seed:undo:all",
+    "db:create": "node scripts/sequelize-cli.js db:create",
+    "db:drop": "node scripts/sequelize-cli.js db:drop"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MungeliDeli/ChurchLibrarySystem.git"
-  },
-  "author": "Group C",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/MungeliDeli/ChurchLibrarySystem/issues"
-  },
-  "homepage": "https://github.com/MungeliDeli/ChurchLibrarySystem#readme",
+  "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "eslint": "^9.35.0",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
     "sequelize-cli": "^6.6.3"
   }
 }

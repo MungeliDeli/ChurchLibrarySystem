@@ -22,12 +22,15 @@ const Input = forwardRef(
     ref
   ) => {
     const baseClasses =
-      "block w-full border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0";
+      "block w-full border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-primary-text)] placeholder:text-[var(--color-secondary-text)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0";
 
     const variants = {
-      default: "border-gray-300 focus:border-blue-500 focus:ring-blue-500",
-      error: "border-red-300 focus:border-red-500 focus:ring-red-500",
-      success: "border-green-300 focus:border-green-500 focus:ring-green-500",
+      default:
+        "focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]",
+      error:
+        "border-[var(--color-error-border)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]",
+      success:
+        "border-[var(--color-success-border)] focus:border-[var(--color-success)] focus:ring-[var(--color-success)]",
     };
 
     const sizes = {
@@ -45,7 +48,7 @@ const Input = forwardRef(
       variants[currentVariant],
       sizes[size],
       widthClass,
-      disabled && "bg-gray-50 cursor-not-allowed opacity-50",
+      disabled && "bg-[var(--color-background)] cursor-not-allowed opacity-50",
       leftIcon && "pl-10",
       rightIcon && "pr-10",
       className
@@ -54,16 +57,16 @@ const Input = forwardRef(
     return (
       <div className={clsx("space-y-1", fullWidth && "w-full")}>
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-[var(--color-primary-text)]">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="text-[var(--color-error)] ml-1">*</span>}
           </label>
         )}
 
         <div className="relative">
           {leftIcon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">{leftIcon}</span>
+              <span className="text-[var(--color-icon-muted)]">{leftIcon}</span>
             </div>
           )}
 
@@ -79,7 +82,7 @@ const Input = forwardRef(
 
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">{rightIcon}</span>
+              <span className="text-[var(--color-icon-muted)]">{rightIcon}</span>
             </div>
           )}
         </div>
@@ -88,7 +91,9 @@ const Input = forwardRef(
           <p
             className={clsx(
               "text-sm",
-              error ? "text-red-600" : "text-gray-500"
+              error
+                ? "text-[var(--color-error)]"
+                : "text-[var(--color-secondary-text)]"
             )}
           >
             {error || helperText}

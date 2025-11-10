@@ -47,14 +47,14 @@ const Modal = ({
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 bg-[var(--color-overlay)] transition-opacity"
           onClick={closeOnBackdropClick ? onClose : undefined}
         />
 
         {/* Modal */}
         <div
           className={clsx(
-            "relative bg-white rounded-lg shadow-xl w-full mx-auto",
+            "relative bg-[var(--color-surface)] rounded-lg shadow-xl w-full mx-auto border border-[var(--color-border)]",
             sizes[size],
             "animate-modal-in",
             className
@@ -63,14 +63,16 @@ const Modal = ({
         >
           {/* Header */}
           {(title || showCloseButton) && (
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--color-border)]">
               {title && (
-                <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+                <h3 className="text-lg font-medium text-[var(--color-primary-text)]">
+                  {title}
+                </h3>
               )}
               {showCloseButton && (
                 <button
                   onClick={onClose}
-                  className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="inline-flex items-center justify-center rounded-md p-1.5 text-[var(--color-icon-muted)] hover:text-[var(--color-secondary-text)] hover:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 >
                   <span className="sr-only">Close</span>
                   <svg

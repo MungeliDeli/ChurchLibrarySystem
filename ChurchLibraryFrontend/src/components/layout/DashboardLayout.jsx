@@ -58,7 +58,7 @@ const DashboardLayout = ({ children }) => {
       {/* Mobile Overlay */}
       {isMobile && !sidebarCollapsed && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 sm:hidden"
+          className="fixed inset-0 bg-black/50 z-30 sm:hidden"
           onClick={() => {
             /* Close sidebar on mobile */
           }}

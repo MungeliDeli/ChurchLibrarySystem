@@ -1,7 +1,5 @@
-import { Pool } from "pg";
-import dotenv from "dotenv";
-
-dotenv.config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
 // Database configuration
 const dbConfig = {
@@ -80,4 +78,10 @@ const closePool = async () => {
   }
 };
 
-export { pool, query, getClient, closePool, dbConfig };
+module.exports = {
+  pool,
+  query,
+  getClient,
+  closePool,
+  dbConfig,
+};

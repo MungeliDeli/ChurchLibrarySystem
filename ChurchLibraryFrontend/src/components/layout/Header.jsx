@@ -61,12 +61,12 @@ const Header = () => {
 
   const buttonClasses = clsx(
     "p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2",
-    "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] focus:ring-[var(--color-accent)]"
+    "text-[var(--color-secondary-text)] hover:text-[var(--color-primary-text)] hover:bg-[var(--color-surface)] focus:ring-[var(--color-accent)]"
   );
 
   const profileButtonClasses = clsx(
     "flex items-center space-x-2 p-2 rounded-lg transition-all duration-200",
-    "text-[var(--color-text-primary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-offset-2",
+    "text-[var(--color-primary-text)] hover:text-[var(--color-secondary-text)] hover:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-offset-2",
     "focus:ring-[var(--color-accent)]"
   );
 

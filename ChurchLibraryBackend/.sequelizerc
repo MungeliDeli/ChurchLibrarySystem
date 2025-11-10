@@ -1,14 +1,9 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+const path = require('path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-export default {
-  'config': path.resolve('src', 'config', 'config.js'),
-  'models-path': path.resolve('src', 'models'),
-  'seeders-path': path.resolve('src', 'seeders'),
-  'migrations-path': path.resolve('src', 'migrations'),
+module.exports = {
+  'config': path.resolve('config', 'config.json'),
+  'models-path': path.resolve('models'),
+  'seeders-path': path.resolve('seeders'),
+  'migrations-path': path.resolve('migrations'),
 };
 

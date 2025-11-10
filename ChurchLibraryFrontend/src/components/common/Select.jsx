@@ -20,12 +20,15 @@ const Select = forwardRef(
     ref
   ) => {
     const baseClasses =
-      "block w-full border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 appearance-none bg-white";
+      "block w-full border border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] text-[var(--color-primary-text)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0 appearance-none";
 
     const variants = {
-      default: "border-gray-300 focus:border-blue-500 focus:ring-blue-500",
-      error: "border-red-300 focus:border-red-500 focus:ring-red-500",
-      success: "border-green-300 focus:border-green-500 focus:ring-green-500",
+      default:
+        "focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)]",
+      error:
+        "border-[var(--color-error-border)] focus:border-[var(--color-error)] focus:ring-[var(--color-error)]",
+      success:
+        "border-[var(--color-success-border)] focus:border-[var(--color-success)] focus:ring-[var(--color-success)]",
     };
 
     const sizes = {
@@ -43,16 +46,16 @@ const Select = forwardRef(
       variants[currentVariant],
       sizes[size],
       widthClass,
-      disabled && "bg-gray-50 cursor-not-allowed opacity-50",
+      disabled && "bg-[var(--color-background)] cursor-not-allowed opacity-50",
       className
     );
 
     return (
       <div className={clsx("space-y-1", fullWidth && "w-full")}>
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-[var(--color-primary-text)]">
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="text-[var(--color-error)] ml-1">*</span>}
           </label>
         )}
 
@@ -83,7 +86,7 @@ const Select = forwardRef(
           {/* Custom dropdown arrow */}
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg
-              className="h-4 w-4 text-gray-400"
+              className="h-4 w-4 text-[var(--color-icon-muted)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -102,7 +105,9 @@ const Select = forwardRef(
           <p
             className={clsx(
               "text-sm",
-              error ? "text-red-600" : "text-gray-500"
+              error
+                ? "text-[var(--color-error)]"
+                : "text-[var(--color-secondary-text)]"
             )}
           >
             {error || helperText}

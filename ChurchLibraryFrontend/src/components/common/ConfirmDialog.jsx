@@ -19,15 +19,19 @@ const ConfirmDialog = ({
       <div className="flex min-h-screen items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 bg-[var(--color-overlay)] transition-opacity"
           onClick={onClose}
         />
 
         {/* Dialog */}
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto">
+        <div className="relative bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl max-w-md w-full mx-auto">
           <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
-            <p className="text-sm text-gray-500 mb-6">{message}</p>
+            <h3 className="text-lg font-medium text-[var(--color-primary-text)] mb-2">
+              {title}
+            </h3>
+            <p className="text-sm text-[var(--color-secondary-text)] mb-6">
+              {message}
+            </p>
 
             <div className="flex justify-end space-x-3">
               <Button variant="outline" size="medium" onClick={onClose}>

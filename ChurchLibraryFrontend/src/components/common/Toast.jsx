@@ -34,31 +34,31 @@ const Toast = ({
   const types = {
     success: {
       icon: "✅",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      textColor: "text-green-800",
-      iconColor: "text-green-600",
+      container:
+        "bg-[var(--color-success-surface)] border-[var(--color-success-border)] text-[var(--color-success-text)]",
+      iconColor: "text-[var(--color-success)]",
+      focusRing: "focus:ring-[var(--color-success)]",
     },
     error: {
       icon: "❌",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      textColor: "text-red-800",
-      iconColor: "text-red-600",
+      container:
+        "bg-[var(--color-error-surface)] border-[var(--color-error-border)] text-[var(--color-error-text)]",
+      iconColor: "text-[var(--color-error)]",
+      focusRing: "focus:ring-[var(--color-error)]",
     },
     warning: {
       icon: "⚠️",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      textColor: "text-yellow-800",
-      iconColor: "text-yellow-600",
+      container:
+        "bg-[var(--color-warning-surface)] border-[var(--color-warning-border)] text-[var(--color-warning-text)]",
+      iconColor: "text-[var(--color-warning)]",
+      focusRing: "focus:ring-[var(--color-warning)]",
     },
     info: {
       icon: "ℹ️",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      textColor: "text-blue-800",
-      iconColor: "text-blue-600",
+      container:
+        "bg-[var(--color-info-surface)] border-[var(--color-info-border)] text-[var(--color-info-text)]",
+      iconColor: "text-[var(--color-info)]",
+      focusRing: "focus:ring-[var(--color-info)]",
     },
   };
 
@@ -71,7 +71,7 @@ const Toast = ({
     "bottom-center": "bottom-4 left-1/2 transform -translate-x-1/2",
   };
 
-  const currentType = types[type];
+  const currentType = types[type] ?? types.info;
 
   if (!isVisible) return null;
 
@@ -85,15 +85,15 @@ const Toast = ({
     >
       <div
         className={clsx(
-          "rounded-lg border p-4 shadow-lg transition-all duration-300",
-          currentType.bgColor,
-          currentType.borderColor,
-          currentType.textColor
+          "rounded-lg border p-4 shadow-lg transition-all duration-300 bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-primary-text)]",
+          currentType.container
         )}
       >
         <div className="flex items-start">
           <div className="flex-shrink-0">
-            <span className="text-lg">{currentType.icon}</span>
+            <span className={clsx("text-lg", currentType.iconColor)}>
+              {currentType.icon}
+            </span>
           </div>
           <div className="ml-3 flex-1 min-w-0">
             {title && <h4 className="text-sm font-medium mb-1">{title}</h4>}
@@ -104,9 +104,9 @@ const Toast = ({
               <button
                 onClick={handleClose}
                 className={clsx(
-                  "inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2",
+                  "inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 hover:bg-[var(--color-surface-hover)]",
                   currentType.iconColor,
-                  "hover:bg-opacity-20 hover:bg-current"
+                  currentType.focusRing
                 )}
               >
                 <span className="sr-only">Close</span>

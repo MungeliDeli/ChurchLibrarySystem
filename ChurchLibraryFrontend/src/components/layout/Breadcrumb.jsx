@@ -21,14 +21,14 @@ const Breadcrumb = () => {
     <nav className="flex" aria-label="Breadcrumb">
       <ol
         className={clsx(
-          "flex items-center space-x-2 text-sm text-[var(--color-text-secondary)]"
+          "flex items-center space-x-2 text-sm text-[var(--color-secondary-text)]"
         )}
       >
         <li>
           <Link
             to="/dashboard"
             className={clsx(
-              "hover:text-[var(--color-text-primary)] transition-colors duration-200",
+              "hover:text-[var(--color-primary-text)] transition-colors duration-200",
               
             )}
           >
@@ -40,7 +40,7 @@ const Breadcrumb = () => {
           <li key={breadcrumb.path} className="flex items-center">
             <span
               className={clsx(
-                "mx-2 text-[var(--color-text-secondary)]"
+                "mx-2 text-[var(--color-secondary-text)]"
               )}
             >
               /
@@ -49,7 +49,7 @@ const Breadcrumb = () => {
             {breadcrumb.isLast ? (
               <span
                 className={clsx(
-                  "font-medium text-[var(--color-text-primary)]",
+                  "font-medium text-[var(--color-primary-text)]",
              
                 )}
               >
@@ -59,7 +59,7 @@ const Breadcrumb = () => {
               <Link
                 to={breadcrumb.path}
                 className={clsx(
-                  "hover:text-[var(--color-text-primary)] transition-colors duration-200",
+                  "hover:text-[var(--color-primary-text)] transition-colors duration-200",
                   
                 )}
               >

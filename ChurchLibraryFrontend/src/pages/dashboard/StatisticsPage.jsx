@@ -6,10 +6,10 @@ const StatisticsPage = () => {
     <DashboardLayout>
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-4">
+          <h1 className="text-4xl font-bold text-[var(--color-primary-text)] mb-4">
             This is the Statistics page
           </h1>
-          <p className="text-lg text-[var(--color-text-secondary)]">
+          <p className="text-lg text-[var(--color-secondary-text)]">
             Statistics and analytics content will be implemented here
           </p>
         </div>

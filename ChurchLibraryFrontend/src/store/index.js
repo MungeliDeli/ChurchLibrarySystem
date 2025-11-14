@@ -7,20 +7,24 @@ import { combineReducers } from "redux";
 import authReducer from "./slices/authSlice";
 import themeReducer from "./slices/themeSlice";
 import uiReducer from "./slices/uiSlice";
+import bookReducer from "./slices/bookSlice";
+import categoryReducer from "./slices/categorySlice";
 
 // Root reducer
 const rootReducer = combineReducers({
   auth: authReducer,
   theme: themeReducer,
   ui: uiReducer,
+  books: bookReducer,
+  categories: categoryReducer,
 });
 
 // Persist configuration
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "theme"], // Only persist auth and theme, not UI state
-  blacklist: ["ui"], // Don't persist UI state like modals, loading states
+  whitelist: ["auth", "theme"], // Only persist auth and theme
+  blacklist: ["ui", "books", "categories"], // Don't persist UI, book, or category state
 };
 
 // Persisted reducer

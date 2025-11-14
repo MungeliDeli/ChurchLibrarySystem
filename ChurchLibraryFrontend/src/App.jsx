@@ -10,6 +10,7 @@ import { selectIsAuthenticated, selectIsLoading } from "./store";
 import RouteGuard from "./components/auth/RouteGuard";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import ToastContainer from "./components/common/ToastContainer";
 import "./App.css";
 
 // Lazy load pages for code splitting
@@ -35,6 +36,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
+        <ToastContainer />
         <div className="App">
           <Suspense fallback={<PageLoader />}>
             <Routes>

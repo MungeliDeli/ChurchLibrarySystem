@@ -1,15 +1,42 @@
 'use strict';
 const bcrypt = require('bcrypt');
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define(
-    'User',
+  class User extends Model {
+    /**
+     * Helper method for defining associations.
+     * This method is not a part of Sequelize lifecycle.
+     * The `models/index` file will call this method automatically.
+     */
+    static associate(models) {
+      User.hasMany(models.Review, { foreignKey: 'userId' });
+      User.hasMany(models.ReadingList, { foreignKey: 'userId' });
+      User.hasMany(models.Annotation, { foreignKey: 'userId' });
+      User.hasMany(models.ActivityLog, { foreignKey: 'actorId' });
+      User.hasMany(models.Download, { foreignKey: 'userId' });
+    }
+
+    // Instance method to compare password
+    async comparePassword(candidatePassword) {
+      return await bcrypt.compare(candidatePassword, this.password);
+    }
+
+    // Instance method to get user without password
+    toJSON() {
+      const values = { ...this.get() };
+      delete values.password;
+      return values;
+    }
+  }
+
+  User.init(
     {
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
       },
       email: {
         type: DataTypes.STRING,
@@ -74,18 +101,18 @@ module.exports = (sequelize, DataTypes) => {
       },
     },
     {
-      tableName: 'users',
+      sequelize,
+      modelName: 'User',
+      tableName: 'Users', // Explicitly set table name to PascalCase
       timestamps: true,
       underscored: false,
       hooks: {
-        // Hash password before creating user
         beforeCreate: async (user) => {
           if (user.password) {
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(user.password, salt);
           }
         },
-        // Hash password before updating if it changed
         beforeUpdate: async (user) => {
           if (user.changed('password')) {
             const salt = await bcrypt.genSalt(10);
@@ -96,44 +123,5 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  // Instance method to compare password
-  User.prototype.comparePassword = async function (candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
-  };
-
-  // Instance method to get user without password
-  User.prototype.toJSON = function () {
-    const values = { ...this.get() };
-    delete values.password;
-    return values;
-  };
-
-  // Instance method to update last login
-  User.prototype.updateLastLogin = async function () {
-    this.lastLogin = new Date();
-    return await this.save();
-  };
-
-  // Static method to find user by email
-  User.findByEmail = async function (email) {
-    return await this.findOne({ where: { email } });
-  };
-
-  // Static method to find active user by email
-  User.findActiveByEmail = async function (email) {
-    return await this.findOne({
-      where: {
-        email,
-        isActive: true,
-      },
-    });
-  };
-
-  User.associate = function (models) {
-    // Define associations here if needed
-    // Example: User.hasMany(models.Borrowing, { foreignKey: 'userId' });
-  };
-
   return User;
 };
-

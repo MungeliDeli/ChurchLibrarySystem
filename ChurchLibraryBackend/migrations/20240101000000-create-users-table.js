@@ -3,12 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable('Users', { // Changed to PascalCase
       id: {
         allowNull: false,
-        autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID, // Changed to UUID
+        defaultValue: Sequelize.UUIDV4, // Added default value
       },
       email: {
         type: Sequelize.STRING,
@@ -53,19 +53,23 @@ module.exports = {
     });
 
     // Create index on email for faster lookups
-    await queryInterface.addIndex('users', ['email'], {
+    await queryInterface.addIndex('Users', ['email'], { // Changed to PascalCase
       name: 'users_email_index',
       unique: true,
     });
 
     // Create index on role for role-based queries
-    await queryInterface.addIndex('users', ['role'], {
+    await queryInterface.addIndex('Users', ['role'], { // Changed to PascalCase
       name: 'users_role_index',
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('users');
+    // First, remove the indexes
+    await queryInterface.removeIndex('Users', 'users_email_index');
+    await queryInterface.removeIndex('Users', 'users_role_index');
+    
+    // Then, drop the table
+    await queryInterface.dropTable('Users');
   },
 };
-

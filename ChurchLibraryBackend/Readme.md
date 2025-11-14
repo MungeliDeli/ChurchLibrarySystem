@@ -2,6 +2,45 @@
 
 Backend API for the Church Library Management System using Express, PostgreSQL, and Sequelize.
 
+---
+
+## ⚙️ How to Run This Project (From a Clean State)
+
+To ensure the application runs correctly with all the latest changes, please follow these steps in order in the `ChurchLibraryBackend` directory.
+
+**1. Install Dependencies:** This installs all required libraries, including new ones like `cors`.
+```bash
+npm install
+```
+
+**2. Drop the Database:** This ensures you don't have any old or inconsistent data.
+```bash
+npm run db:drop
+```
+
+**3. Create the Database:**
+```bash
+npm run db:create
+```
+
+**4. Run Migrations:** This builds all the database tables with the correct structure.
+```bash
+npm run db:migrate
+```
+
+**5. Seed the Database:** This adds the default admin user.
+```bash
+npm run db:seed
+```
+
+**6. Start the Server:** This runs the backend server in development mode.
+```bash
+npm run dev
+```
+The backend will now be running, typically on `http://localhost:3001`.
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
@@ -12,28 +51,29 @@ npm install
 
 ### 2. Set Up Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root of the `ChurchLibraryBackend` directory and add the following variables.
 
 ```env
+# Server Configuration
 NODE_ENV=development
 PORT=3001
 
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=church_library
 DB_USER=postgres
-DB_PASSWORD=your_password_here
+DB_PASSWORD=your_postgres_password
 
-DB_POOL_MAX=20
-DB_POOL_IDLE_TIMEOUT=30000
-DB_POOL_CONNECTION_TIMEOUT=2000
-
-JWT_SECRET=your_jwt_secret_key_here
+# JWT Configuration
+JWT_SECRET=a-very-secret-key-that-is-long-and-secure
 JWT_EXPIRES_IN=24h
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_key_here
-JWT_REFRESH_EXPIRES_IN=7d
 
-CORS_ORIGIN=http://localhost:5173
+# AWS S3 Configuration for File Uploads
+AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_KEY
+AWS_REGION=YOUR_S3_BUCKET_REGION
+S3_BUCKET_NAME=YOUR_S3_BUCKET_NAME
 ```
 
 ### 3. Create Database
@@ -55,7 +95,7 @@ npm run db:seed
 ```
 
 This creates a demo admin user:
-- **Email:** `admin@church.local`
+- **Email:** `admin@example.com`
 - **Password:** `password123`
 
 ### 5. Start Server
@@ -154,3 +194,29 @@ const result = await query('SELECT * FROM users WHERE email = $1', ['admin@churc
 - Password hashing is handled automatically via model hooks
 - User passwords are never returned in JSON responses
 
+---
+
+## ✅ Current Status (as of recent changes)
+
+### Implemented Features:
+- **Database Schema:** All required models have been created (`User`, `Category`, `LibraryItem`, `Review`, `ReadingList`, `Annotation`, `ActivityLog`, `Download`).
+- **API Endpoints:**
+    - `/api/auth`: User registration and login (`/register`, `/login`).
+    - `/api/books`: Full CRUD (Create, Read, Update, Delete) for library items.
+    - `/api/categories`: Full CRUD for categories.
+- **File Uploads:**
+    - Integrated `multer` and the AWS S3 SDK to handle file uploads.
+    - The "Create Book" and "Update Book" endpoints now accept a `bookFile` and upload it to a configured S3 bucket.
+- **Security:**
+    - Administrative routes (creating/updating/deleting books and categories) are protected and require an 'admin' or 'librarian' role.
+    - JWT (JSON Web Token) is used for authentication.
+- **Data Integrity:**
+    - Logic has been added to prevent the deletion of a category if it is currently in use by any books.
+- **CORS:**
+    - The server is configured to accept requests from the frontend development server.
+
+### Default Admin User:
+The database seeder (`npm run db:seed`) creates a default admin user with the following credentials:
+- **Email:** `admin@example.com`
+- **Password:** `password123`
+You must log in with this user to access administrative features.

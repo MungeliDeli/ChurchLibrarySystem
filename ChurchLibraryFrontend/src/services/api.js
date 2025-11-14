@@ -12,7 +12,6 @@ const API_CONFIG = {
   baseURL: API_BASE_URL,
   timeout: isDevelopment ? 15000 : 10000, // Longer timeout for development
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
   },
   // Enable request/response logging in development
@@ -326,6 +325,41 @@ export const booksAPI = {
       return response;
     } catch (error) {
       throw new Error(handleError(error, "Failed to export books"));
+    }
+  },
+};
+
+export const categoriesAPI = {
+  getCategories: async (params = {}) => {
+    try {
+      const response = await api.get("/categories", { params });
+      return response;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to fetch categories"));
+    }
+  },
+  createCategory: async (data) => {
+    try {
+      const response = await api.post("/categories", data);
+      return response;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to create category"));
+    }
+  },
+  updateCategory: async (id, data) => {
+    try {
+      const response = await api.put(`/categories/${id}`, data);
+      return response;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to update category"));
+    }
+  },
+  deleteCategory: async (id) => {
+    try {
+      const response = await api.delete(`/categories/${id}`);
+      return response;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to delete category"));
     }
   },
 };

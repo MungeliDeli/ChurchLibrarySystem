@@ -1,35 +1,55 @@
-function responseOk(data) {
-  return { ok: true, data };
-}
-function responseErr(message) {
-  return { ok: false, message };
-}
+import api from './api';
+import * as storage from './storageService';
 
-export async function register({ name, email, password }) {
+async function register({ name, email, password }) {
   try {
-    await new Promise((r) => setTimeout(r, 500));
-    if (!name || !email || !password) return responseErr("Missing fields");
-    return responseOk({ user: { name, email } });
+    const response = await api.post('/auth/register', { name, email, password });
+    return { ok: true, data: response.data };
   } catch (e) {
-    return responseErr("Registration failed");
+    return { ok: false, message: e.message || 'Registration failed' };
   }
 }
 
-export async function login({ email, password }) {
+async function login({ email, password }) {
   try {
-    await new Promise((r) => setTimeout(r, 500));
-    if (!email || !password) return responseErr("Missing credentials");
-    return responseOk({ user: { email } });
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user } = response.data;
+
+    if (token) {
+      await storage.secureSet('userToken', token);
+      await storage.setJson('user', user);
+      return { ok: true, data: { user } };
+    }
+
+    return { ok: false, message: 'Login failed: No token received' };
   } catch (e) {
-    return responseErr("Login failed");
+    return { ok: false, message: e.response?.data?.message || e.message || 'Login failed' };
   }
 }
 
-export async function googleSignIn() {
+async function logout() {
+    await storage.secureRemove('userToken');
+    await storage.removeItem('user');
+}
+
+async function getUser() {
+    return await storage.getJson('user');
+}
+
+async function getToken() {
+    return await storage.secureGet('userToken');
+}
+
+
+async function googleSignIn() {
   try {
+    // This part will require more complex setup with Google Sign-In library.
+    // For now, it remains a placeholder.
     await new Promise((r) => setTimeout(r, 500));
-    return responseOk({ user: { provider: "google" } });
+    return { ok: true, data: { user: { provider: 'google' } } };
   } catch (e) {
-    return responseErr("Google sign-in failed");
+    return { ok: false, message: 'Google sign-in failed' };
   }
 }
+
+export { register, login, logout, getUser, getToken, googleSignIn };

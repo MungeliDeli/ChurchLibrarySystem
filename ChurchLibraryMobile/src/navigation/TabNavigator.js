@@ -1,6 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/main/HomeScreen";
+import LibraryStack from "./LibraryStack";
 import LibraryScreen from "../screens/main/LibraryScreen";
 import BibleScreen from "../screens/main/BibleScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
@@ -72,7 +73,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Library"
-        component={LibraryScreen}
+        component={LibraryStack}
         options={{
           tabBarLabel: "Library",
           tabBarIcon: ({ color, size }) => (

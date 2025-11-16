@@ -1,5 +1,5 @@
 const db = require('../../models');
-const { uploadFileToS3 } = require('../utils/s3');
+const { uploadFileToS3, getSignedUrlForS3Key, deleteFileFromS3 } = require('../utils/s3');
 
 // Create a new Library Item
 exports.createItem = async (req, res) => {
@@ -30,12 +30,12 @@ exports.createItem = async (req, res) => {
       categoryId,
     };
 
-    // If a file is uploaded, send it to S3 and get the URL
+    // If a file is uploaded, send it to S3 and get the key
     if (req.file) {
       console.log("File found, attempting to upload to S3...");
-      const fileUrl = await uploadFileToS3(req.file);
-      itemData.fileUrl = fileUrl;
-      console.log("S3 Upload successful. URL:", fileUrl);
+      const fileKey = await uploadFileToS3(req.file);
+      itemData.fileUrl = fileKey; // Storing the key in fileUrl
+      console.log("S3 Upload successful. Key:", fileKey);
     } else {
       console.log("No file found in request.");
     }
@@ -62,7 +62,15 @@ exports.getAllItems = async (req, res) => {
       }],
       order: [['createdAt', 'DESC']],
     });
-    res.status(200).json(items);
+
+    // Generate pre-signed URLs for each item
+    const itemsWithUrls = await Promise.all(items.map(async (item) => {
+      const plainItem = item.get({ plain: true });
+      plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+      return plainItem;
+    }));
+
+    res.status(200).json(itemsWithUrls);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving library items.', error: error.message });
   }
@@ -83,7 +91,10 @@ exports.getItemById = async (req, res) => {
       return res.status(404).json({ message: 'Library item not found.' });
     }
 
-    res.status(200).json(item);
+    const plainItem = item.get({ plain: true });
+    plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+
+    res.status(200).json(plainItem);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving library item.', error: error.message });
   }
@@ -110,14 +121,18 @@ exports.updateItem = async (req, res) => {
       updateData.authors = updateData.authors ? updateData.authors.split(',').map(s => s.trim()) : [];
     }
 
-    // If a new file is uploaded, send it to S3 and get the URL
+    // If a new file is uploaded, delete the old one and upload the new one
     if (req.file) {
-      console.log("File found, attempting to upload to S3...");
-      const fileUrl = await uploadFileToS3(req.file);
-      updateData.fileUrl = fileUrl;
-      console.log("S3 Upload successful. URL:", fileUrl);
+      console.log("New file found, attempting to upload to S3...");
+      // Delete the old file from S3 if it exists
+      if (item.fileUrl) {
+        await deleteFileFromS3(item.fileUrl);
+      }
+      const fileKey = await uploadFileToS3(req.file);
+      updateData.fileUrl = fileKey;
+      console.log("S3 Upload successful. Key:", fileKey);
     } else {
-      console.log("No file found in request.");
+      console.log("No new file found in request.");
     }
 
     // Update the item with data from request body
@@ -141,6 +156,11 @@ exports.deleteItem = async (req, res) => {
 
     if (!item) {
       return res.status(404).json({ message: 'Library item not found.' });
+    }
+
+    // Delete the file from S3 if it exists
+    if (item.fileUrl) {
+      await deleteFileFromS3(item.fileUrl);
     }
 
     await item.destroy();

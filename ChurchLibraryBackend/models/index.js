@@ -19,6 +19,10 @@ let sequelize;
 if (config.use_env_variable) {
   sequelize = new Sequelize(process.env[config.use_env_variable], config);
 } else {
+  // Defensive: ensure username/password are strings (pg SCRAM auth requires a string password)
+  if (config.username != null) config.username = String(config.username);
+  if (config.password != null) config.password = String(config.password);
+
   sequelize = new Sequelize(config.database, config.username, config.password, config);
 }
 

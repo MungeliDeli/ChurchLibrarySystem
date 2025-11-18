@@ -18,24 +18,23 @@ const BUCKET_NAME = process.env.S3_BUCKET_NAME;
  * @param {object} file - The file object from multer (req.file).
  * @returns {Promise<string>} The S3 key of the uploaded file.
  */
-const uploadFileToS3 = async (file) => {
+const uploadFileToS3 = async (file, fileName) => {
   if (!file) {
     throw new Error('No file provided for upload.');
   }
 
-  const fileExtension = file.originalname.split('.').pop();
-  const fileName = `${uuidv4()}.${fileExtension}`;
+  const key = fileName || `${uuidv4()}.${file.originalname.split('.').pop()}`;
 
   const uploadParams = {
     Bucket: BUCKET_NAME,
-    Key: fileName,
+    Key: key,
     Body: file.buffer,
     ContentType: file.mimetype,
   };
 
   try {
     await s3Client.send(new PutObjectCommand(uploadParams));
-    return fileName; // Return the key instead of the full URL
+    return key; // Return the key
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw new Error("Failed to upload file to S3.");
@@ -84,10 +83,11 @@ const deleteFileFromS3 = async (key) => {
 
   try {
     await s3Client.send(new DeleteObjectCommand(deleteParams));
+    console.log(`Successfully deleted ${key} from S3.`);
   } catch (error) {
-    console.error("Error deleting from S3:", error);
-    // We don't throw an error here, just log it.
-    // Deleting the DB entry is more important.
+    console.error(`Error deleting ${key} from S3:`, error);
+    // Re-throw the error to be caught by the calling function
+    throw error;
   }
 };
 

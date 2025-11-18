@@ -35,9 +35,11 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}.`);
   await testDbConnection();
 });
+
+server.setTimeout(120000);
 
 module.exports = app;

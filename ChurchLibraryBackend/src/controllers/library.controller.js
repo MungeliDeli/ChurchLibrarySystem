@@ -1,5 +1,20 @@
 const db = require('../../models');
 const { uploadFileToS3, getSignedUrlForS3Key, deleteFileFromS3 } = require('../utils/s3');
+const { generateThumbnailFromPdf } = require('../utils/thumbnail');
+const fs = require('fs');
+const path = require('path');
+
+const { v4: uuidv4 } = require('uuid');
+
+const sanitizeTitleForFilename = (title) => {
+  if (!title) {
+    return '';
+  }
+  return title.toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-.]/g, '')
+    .replace(/--+/g, '-');
+};
 
 // Create a new Library Item
 exports.createItem = async (req, res) => {
@@ -33,9 +48,43 @@ exports.createItem = async (req, res) => {
     // If a file is uploaded, send it to S3 and get the key
     if (req.file) {
       console.log("File found, attempting to upload to S3...");
-      const fileKey = await uploadFileToS3(req.file);
+      const sanitizedTitle = sanitizeTitleForFilename(title);
+      const fileExtension = req.file.originalname.split('.').pop();
+      const bookFileName = `${sanitizedTitle}.${fileExtension}`;
+
+      const fileKey = await uploadFileToS3(req.file, bookFileName);
       itemData.fileUrl = fileKey; // Storing the key in fileUrl
       console.log("S3 Upload successful. Key:", fileKey);
+
+      // Generate thumbnail if it's a PDF
+      if (req.file.mimetype === 'application/pdf') {
+        const tempDir = path.join(__dirname, '..', '..', 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
+        fs.writeFileSync(tempPdfPath, req.file.buffer);
+
+        try {
+          const thumbnailPath = await generateThumbnailFromPdf(tempPdfPath, tempDir);
+          const thumbnailFileName = `${sanitizedTitle}-thumbnail.jpg`;
+          const thumbnailFile = {
+            path: thumbnailPath,
+            originalname: path.basename(thumbnailPath),
+            mimetype: 'image/jpeg',
+            buffer: fs.readFileSync(thumbnailPath)
+          };
+          const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
+          itemData.coverImageUrl = thumbnailKey;
+          console.log("Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath); // Clean up the generated thumbnail
+        } catch (thumbError) {
+          console.error("--- ERROR generating thumbnail ---", thumbError);
+          // Proceed without a thumbnail
+        } finally {
+          fs.unlinkSync(tempPdfPath); // Clean up the temporary PDF file
+        }
+      }
     } else {
       console.log("No file found in request.");
     }
@@ -66,7 +115,14 @@ exports.getAllItems = async (req, res) => {
     // Generate pre-signed URLs for each item
     const itemsWithUrls = await Promise.all(items.map(async (item) => {
       const plainItem = item.get({ plain: true });
-      plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+      console.log('Item from DB:', plainItem.title, 'Cover Image Key:', plainItem.coverImageUrl);
+      if (plainItem.fileUrl) {
+        plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+      }
+      if (plainItem.coverImageUrl) {
+        plainItem.coverImageUrl = await getSignedUrlForS3Key(plainItem.coverImageUrl);
+      }
+      console.log('Item after signing:', plainItem.title, 'Cover Image URL:', plainItem.coverImageUrl);
       return plainItem;
     }));
 
@@ -92,7 +148,12 @@ exports.getItemById = async (req, res) => {
     }
 
     const plainItem = item.get({ plain: true });
-    plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+    if (plainItem.fileUrl) {
+      plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+    }
+    if (plainItem.coverImageUrl) {
+      plainItem.coverImageUrl = await getSignedUrlForS3Key(plainItem.coverImageUrl);
+    }
 
     res.status(200).json(plainItem);
   } catch (error) {
@@ -128,9 +189,48 @@ exports.updateItem = async (req, res) => {
       if (item.fileUrl) {
         await deleteFileFromS3(item.fileUrl);
       }
-      const fileKey = await uploadFileToS3(req.file);
+      // Delete the old cover image from S3 if it exists
+      if (item.coverImageUrl) {
+        await deleteFileFromS3(item.coverImageUrl);
+      }
+
+      const sanitizedTitle = sanitizeTitleForFilename(updateData.title || item.title);
+      const fileExtension = req.file.originalname.split('.').pop();
+      const bookFileName = `${sanitizedTitle}.${fileExtension}`;
+
+      const fileKey = await uploadFileToS3(req.file, bookFileName);
       updateData.fileUrl = fileKey;
       console.log("S3 Upload successful. Key:", fileKey);
+
+      // Generate thumbnail if it's a PDF
+      if (req.file.mimetype === 'application/pdf') {
+        const tempDir = path.join(__dirname, '..', '..', 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
+        fs.writeFileSync(tempPdfPath, req.file.buffer);
+
+        try {
+          const thumbnailPath = await generateThumbnailFromPdf(tempPdfPath, tempDir);
+          const thumbnailFileName = `${sanitizedTitle}-thumbnail.jpg`;
+          const thumbnailFile = {
+            path: thumbnailPath,
+            originalname: path.basename(thumbnailPath),
+            mimetype: 'image/jpeg',
+            buffer: fs.readFileSync(thumbnailPath)
+          };
+          const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
+          updateData.coverImageUrl = thumbnailKey;
+          console.log("Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath); // Clean up the generated thumbnail
+        } catch (thumbError) {
+          console.error("--- ERROR generating thumbnail ---", thumbError);
+          // Proceed without a thumbnail
+        } finally {
+          fs.unlinkSync(tempPdfPath); // Clean up the temporary PDF file
+        }
+      }
     } else {
       console.log("No new file found in request.");
     }
@@ -150,23 +250,36 @@ exports.updateItem = async (req, res) => {
 
 // Delete a Library Item
 exports.deleteItem = async (req, res) => {
+  console.log("--- Delete Book Request ---");
   try {
     const { id } = req.params;
+    console.log("Attempting to delete item with ID:", id);
+
     const item = await db.LibraryItem.findByPk(id);
 
     if (!item) {
+      console.log("Item not found with ID:", id);
       return res.status(404).json({ message: 'Library item not found.' });
     }
+    console.log("Item found:", item.title);
 
     // Delete the file from S3 if it exists
     if (item.fileUrl) {
+      console.log("Deleting file from S3:", item.fileUrl);
       await deleteFileFromS3(item.fileUrl);
+    }
+    // Delete the cover image from S3 if it exists
+    if (item.coverImageUrl) {
+      console.log("Deleting cover image from S3:", item.coverImageUrl);
+      await deleteFileFromS3(item.coverImageUrl);
     }
 
     await item.destroy();
+    console.log("Item destroyed successfully from database.");
 
     res.status(200).json({ message: 'Library item deleted successfully.' });
   } catch (error) {
+    console.error("--- ERROR in Delete Book ---", error);
     res.status(500).json({ message: 'Error deleting library item.', error: error.message });
   }
 };

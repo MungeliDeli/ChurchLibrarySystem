@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { getAllCategories } from '../../services/categoryService';
 import { getAllBooks } from '../../services/libraryService';
 import useTheme from '../../hooks/useTheme';
@@ -57,14 +57,17 @@ function LibraryScreen({ navigation }) { // Add navigation prop
     </View>
   );
 
-  const renderBook = ({ item }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
-      <View style={[styles.bookItem, { backgroundColor: theme.colors.surface.main }]}>
-        <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold' }}>{item.title}</Text>
-        <Text style={{ color: theme.colors.text.secondary }}>by {item.authors.join(', ')}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderBook = ({ item }) => {
+    console.log('Book item:', item.title, 'Cover Image URL:', item.coverImageUrl);
+    return (
+      <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
+        <View style={styles.bookItem}>
+          <Image source={{ uri: item.coverImageUrl }} style={styles.bookCover} />
+          <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', marginTop: 8 }}>{item.title}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -103,9 +106,11 @@ function LibraryScreen({ navigation }) { // Add navigation prop
 
       <Text style={[styles.title, { color: theme.colors.text.primary }]}>All Books</Text>
       <FlatList
+        horizontal
         data={filteredBooks}
         renderItem={renderBook}
         keyExtractor={(item) => item.itemId.toString()}
+        showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
       />
     </View>
@@ -142,9 +147,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   bookItem: {
-    padding: 16,
+    marginRight: 16,
+    width: 150,
+  },
+  bookCover: {
+    width: 150,
+    height: 220,
     borderRadius: 8,
-    marginBottom: 12,
   },
 });
 

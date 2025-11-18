@@ -10,7 +10,7 @@ const isProduction = import.meta.env.MODE === "production";
 // API Configuration
 const API_CONFIG = {
   baseURL: API_BASE_URL,
-  timeout: isDevelopment ? 15000 : 10000, // Longer timeout for development
+  timeout: isDevelopment ? 600000 : 10000, // Longer timeout for development
   headers: {
     Accept: "application/json",
   },
@@ -252,9 +252,14 @@ export const booksAPI = {
     }
   },
 
-  createBook: async (data) => {
+  createBook: async (data, onUploadProgress) => {
     try {
-      const response = await api.post("/books", data);
+      const response = await api.post("/books", data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress
+      });
       return response;
     } catch (error) {
       throw new Error(handleError(error, "Failed to create book"));

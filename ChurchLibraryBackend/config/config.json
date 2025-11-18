@@ -1,7 +1,7 @@
 {
   "development": {
     "username": "postgres",
-    "password": "1693540246",
+    "password": "2ndDBonmachine",
     "database": "church_library",
     "host": "localhost",
     "port": 5432,
@@ -16,7 +16,7 @@
   },
   "test": {
     "username": "postgres",
-    "password": "1693540246",
+    "password": "2ndDBonmachine",
     "database": "church_library_test",
     "host": "localhost",
     "port": 5432,

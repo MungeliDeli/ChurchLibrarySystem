@@ -2,14 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, Button, Linking, Image } from 'react-native';
 import useTheme from '../../hooks/useTheme';
 
-function BookDetailsScreen({ route }) {
+function BookDetailsScreen({ route, navigation }) {
   const { theme } = useTheme();
   const { book } = route.params;
-  console.log('Book Details:', book);
 
   const handleRead = () => {
     if (book.downloadUrl) {
-      Linking.openURL(book.downloadUrl);
+      navigation.navigate('BookReader', { downloadUrl: book.downloadUrl, itemId: book.itemId });
     }
   };
 

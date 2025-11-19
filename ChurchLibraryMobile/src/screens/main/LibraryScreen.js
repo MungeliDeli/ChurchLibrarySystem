@@ -58,7 +58,6 @@ function LibraryScreen({ navigation }) { // Add navigation prop
   );
 
   const renderBook = ({ item }) => {
-    console.log('Book item:', item.title, 'Cover Image URL:', item.coverImageUrl);
     return (
       <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
         <View style={styles.bookItem}>

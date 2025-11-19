@@ -8,9 +8,11 @@ import {
   Image,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 import useTheme from "../../hooks/useTheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useDispatch } from "react-redux";
+import { logout } from "../../store/slices/authSlice";
 
 const drawerItems = [
   { name: "Home Dashboard", icon: "home", screen: "Home" },
@@ -24,14 +26,24 @@ const drawerItems = [
   { name: "Settings", icon: "settings", screen: null },
   { name: "Help & Support", icon: "help-circle", screen: null },
   { name: "About", icon: "info", screen: null },
+  { name: "Logout", icon: "log-out", screen: "Auth" },
 ];
 
 export default function DrawerContent() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   const handlePress = (item) => {
+    if (item.name === 'Logout') {
+      handleLogout();
+      return;
+    }
     if (item.screen) {
       navigation.navigate(item.screen);
     } else {

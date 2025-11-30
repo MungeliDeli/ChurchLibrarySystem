@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, Button, Linking, Image, ScrollView } from 'react-native';
 import useTheme from '../../hooks/useTheme';
 
 function BookDetailsScreen({ route, navigation }) {
@@ -14,15 +14,17 @@ function BookDetailsScreen({ route, navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      {book.coverImageUrl && (
-        <Image source={{ uri: book.coverImageUrl }} style={styles.bookCover} />
-      )}
-      <Text style={[styles.title, { color: theme.colors.text.primary }]}>{book.title}</Text>
-      <Text style={[styles.author, { color: theme.colors.text.secondary }]}>by {book.authors.join(', ')}</Text>
-      <Text style={[styles.description, { color: theme.colors.text.primary }]}>{book.description}</Text>
-      {book.downloadUrl && (
-        <Button title="Read Book" onPress={handleRead} />
-      )}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {book.coverImageUrl && (
+          <Image source={{ uri: book.coverImageUrl }} style={styles.bookCover} />
+        )}
+        <Text style={[styles.title, { color: theme.colors.text.primary }]}>{book.title}</Text>
+        <Text style={[styles.author, { color: theme.colors.text.secondary }]}>by {book.authors.join(', ')}</Text>
+        <Text style={[styles.description, { color: theme.colors.text.primary }]}>{book.description}</Text>
+        {book.downloadUrl && (
+          <Button title="Read Book" onPress={handleRead} />
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -31,7 +33,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    alignItems: 'center',
+    // alignItems: 'center', // Removed from here
+  },
+  scrollContent: {
+    alignItems: 'center', // Applied here
   },
   bookCover: {
     width: 200,

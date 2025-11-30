@@ -18,6 +18,15 @@ app.use('/api/books', libraryRoutes);
 const categoryRoutes = require('./routes/category.routes');
 app.use('/api/categories', categoryRoutes);
 
+const homeRoutes = require('./routes/home.routes');
+app.use('/api/home', homeRoutes);
+
+const activityRoutes = require('./routes/activity.routes');
+app.use('/api/activity', activityRoutes);
+
+const progressRoutes = require('./routes/progress.routes.js');
+app.use('/api/progress', progressRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

@@ -16,7 +16,7 @@ async function login({ email, password }) {
     const { token, user } = response.data;
 
     if (token) {
-      await storage.secureSet('userToken', token);
+      await storage.setUserToken(token);
       await storage.setJson('user', user);
       return { ok: true, data: { user } };
     }
@@ -28,18 +28,13 @@ async function login({ email, password }) {
 }
 
 async function logout() {
-    await storage.secureRemove('userToken');
+    await storage.removeUserToken();
     await storage.removeItem('user');
 }
 
 async function getUser() {
     return await storage.getJson('user');
 }
-
-async function getToken() {
-    return await storage.secureGet('userToken');
-}
-
 
 async function googleSignIn() {
   try {
@@ -52,4 +47,4 @@ async function googleSignIn() {
   }
 }
 
-export { register, login, logout, getUser, getToken, googleSignIn };
+export { register, login, logout, getUser, googleSignIn };

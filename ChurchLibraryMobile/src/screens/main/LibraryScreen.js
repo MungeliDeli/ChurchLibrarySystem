@@ -12,6 +12,7 @@ function LibraryScreen({ navigation }) { // Add navigation prop
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,22 +52,189 @@ function LibraryScreen({ navigation }) { // Add navigation prop
     );
   }, [books, searchQuery]);
 
-  const renderCategory = ({ item }) => (
-    <View style={[styles.categoryItem, { backgroundColor: theme.colors.surface.main }]}>
-      <Text style={{ color: theme.colors.text.primary }}>{item.name}</Text>
-    </View>
-  );
+  const categoriesWithBooks = useMemo(() => {
+    if (!categories.length || !filteredBooks.length) {
+      return [];
+    }
+    return categories
+      .map(category => ({
+        ...category,
+        books: filteredBooks.filter(book => book.categoryId === category.categoryId),
+      }))
+      .filter(category => category.books.length > 0);
+  }, [categories, filteredBooks]);
 
-  const renderBook = ({ item }) => {
+  const handleCategoryPress = (category) => {
+    if (selectedCategory && selectedCategory.categoryId === category.categoryId) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(category);
+    }
+  };
+
+  const renderCategory = ({ item }) => {
+    const isSelected = selectedCategory && selectedCategory.categoryId === item.categoryId;
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
-        <View style={styles.bookItem}>
-          <Image source={{ uri: item.coverImageUrl }} style={styles.bookCover} />
-          <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', marginTop: 8 }}>{item.title}</Text>
+      <TouchableOpacity onPress={() => handleCategoryPress(item)}>
+        <View style={[
+          styles.categoryItem,
+          { backgroundColor: isSelected ? theme.colors.primary.main : theme.colors.surface.main }
+        ]}>
+          <Text style={{ color: isSelected ? theme.colors.surface.main : theme.colors.text.primary }}>{item.name}</Text>
         </View>
       </TouchableOpacity>
     );
   };
+
+    const renderBookCarouselItem = ({ item }) => {
+
+      return (
+
+        <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
+
+          <View style={styles.bookItem}>
+
+            <Image source={{ uri: item.coverImageUrl }} style={styles.bookCover} />
+
+            <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', marginTop: 8 }}>{item.title}</Text>
+
+          </View>
+
+        </TouchableOpacity>
+
+      );
+
+    };
+
+  
+
+    const renderBookGridItem = ({ item }) => {
+
+      return (
+
+        <TouchableOpacity onPress={() => navigation.navigate('BookDetails', { book: item })}>
+
+          <View style={styles.bookGridItem}>
+
+            <Image source={{ uri: item.coverImageUrl }} style={styles.bookGridCover} />
+
+            <Text style={{ color: theme.colors.text.primary, fontWeight: 'bold', marginTop: 8 }} numberOfLines={2}>{item.title}</Text>
+
+          </View>
+
+        </TouchableOpacity>
+
+      );
+
+    };
+
+  
+
+      const BookGrid = ({ books }) => {
+
+  
+
+        return (
+
+  
+
+          <FlatList
+
+  
+
+            data={books}
+
+  
+
+            renderItem={renderBookGridItem}
+
+  
+
+            keyExtractor={(item) => item.itemId.toString()}
+
+  
+
+            numColumns={3}
+
+  
+
+            contentContainerStyle={styles.gridContainer}
+
+  
+
+          />
+
+  
+
+        );
+
+  
+
+      };
+
+  
+
+    
+
+  
+
+      const CategoryCarousel = ({ category }) => {
+
+  
+
+        return (
+
+  
+
+          <View>
+
+  
+
+            <Text style={[styles.title, { color: theme.colors.text.primary }]}>{category.name}</Text>
+
+  
+
+            <FlatList
+
+  
+
+              horizontal
+
+  
+
+              data={category.books}
+
+  
+
+              renderItem={renderBookCarouselItem}
+
+  
+
+              keyExtractor={(item) => item.itemId.toString()}
+
+  
+
+              showsHorizontalScrollIndicator={false}
+
+  
+
+              contentContainerStyle={styles.listContainer}
+
+  
+
+            />
+
+  
+
+          </View>
+
+  
+
+        );
+
+  
+
+      };
 
   if (loading) {
     return (
@@ -103,15 +271,15 @@ function LibraryScreen({ navigation }) { // Add navigation prop
         contentContainerStyle={styles.listContainer}
       />
 
-      <Text style={[styles.title, { color: theme.colors.text.primary }]}>All Books</Text>
-      <FlatList
-        horizontal
-        data={filteredBooks}
-        renderItem={renderBook}
-        keyExtractor={(item) => item.itemId.toString()}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-      />
+            {selectedCategory ? (
+              <BookGrid books={categoriesWithBooks.find(c => c.categoryId === selectedCategory.categoryId)?.books || []} />
+            ) : (        <FlatList
+          data={categoriesWithBooks}
+          renderItem={({ item }) => <CategoryCarousel category={item} />}
+          keyExtractor={(item) => item.categoryId.toString()}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -140,7 +308,7 @@ const styles = StyleSheet.create({
   },
   categoryItem: {
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 25,
     marginRight: 12,
     height: 50,
     justifyContent: 'center'
@@ -152,6 +320,19 @@ const styles = StyleSheet.create({
   bookCover: {
     width: 150,
     height: 220,
+    borderRadius: 8,
+  },
+  gridContainer: {
+    paddingBottom: 16,
+  },
+  bookGridItem: {
+    flex: 1,
+    margin: 4,
+    alignItems: 'center',
+  },
+  bookGridCover: {
+    width: 110,
+    height: 160,
     borderRadius: 8,
   },
 });

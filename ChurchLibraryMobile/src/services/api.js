@@ -4,8 +4,7 @@ import Constants from 'expo-constants';
 
 // Function to construct the base URL
 const getBaseURL = () => {
-	// Manual IP address provided by the user
-	const MANUAL_IP = '192.168.1.155'; // User's provided IP address
+	const MANUAL_IP = '10.178.246.123'; //IP address
 
 	// If running in development on a physical device, it will use your computer's IP address.
 	// If running in an emulator, it will use the correct localhost address.
@@ -36,5 +35,20 @@ const api = axios.create({
 		'Content-Type': 'application/json',
 	},
 });
+
+// Request interceptor to add the auth token to headers
+api.interceptors.request.use(
+  async (config) => {
+    const { getUserToken } = require('./storageService');
+    const token = await getUserToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export default api;

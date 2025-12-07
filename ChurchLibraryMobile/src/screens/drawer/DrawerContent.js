@@ -3,41 +3,112 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   Image,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import useTheme from "../../hooks/useTheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useDispatch } from "react-redux";
+import { logout } from "../../store/slices/authSlice";
 
 const drawerItems = [
-  { name: "Home Dashboard", icon: "home", screen: "Home" },
-  { name: "Browse Categories", icon: "folder", screen: null },
-  { name: "Advanced Search", icon: "search", screen: null },
-  { name: "Reading Schedule", icon: "calendar", screen: null },
-  { name: "Downloads", icon: "download", screen: null },
-  { name: "My Statistics", icon: "bar-chart", screen: null },
-  { name: "Notes & Highlights", icon: "edit", screen: null },
-  { name: "Notifications", icon: "bell", screen: null },
-  { name: "Settings", icon: "settings", screen: null },
-  { name: "Help & Support", icon: "help-circle", screen: null },
-  { name: "About", icon: "info", screen: null },
+  {
+    name: "Home Dashboard",
+    icon: "home",
+    screen: "MainTabs",
+    params: { screen: "Home" },
+    routeName: "Home",
+  },
+  {
+    name: "Browse Categories",
+    icon: "folder",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "BrowseCategories" } },
+    routeName: "BrowseCategories",
+  },
+  {
+    name: "Advanced Search",
+    icon: "search",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "AdvancedSearch" } },
+    routeName: "AdvancedSearch",
+  },
+  {
+    name: "Reading Schedule",
+    icon: "calendar",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "ReadingSchedule" } },
+    routeName: "ReadingSchedule",
+  },
+  {
+    name: "Downloads",
+    icon: "download",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "Downloads" } },
+    routeName: "Downloads",
+  },
+  {
+    name: "My Statistics",
+    icon: "bar-chart",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "MyStatistics" } },
+    routeName: "MyStatistics",
+  },
+  {
+    name: "Notes & Highlights",
+    icon: "edit",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "NotesHighlights" } },
+    routeName: "NotesHighlights",
+  },
+  {
+    name: "Notifications",
+    icon: "bell",
+    screen: "MainTabs",
+    params: { screen: "Library", params: { screen: "Notifications" } },
+    routeName: "Notifications",
+  },
+  {
+    name: "Settings",
+    icon: "settings",
+    screen: "Settings",
+    routeName: "Settings",
+  },
+  {
+    name: "Help & Support",
+    icon: "help-circle",
+    screen: "HelpSupport",
+    routeName: "HelpSupport",
+  },
+  { name: "About", icon: "info", screen: "About", routeName: "About" },
+  { name: "Logout", icon: "log-out", screen: "Auth", routeName: "Auth" },
 ];
 
-export default function DrawerContent() {
-  const navigation = useNavigation();
+export default function DrawerContent({ navigation, state }) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   const handlePress = (item) => {
+    if (item.name === "Logout") {
+      handleLogout();
+      return;
+    }
     if (item.screen) {
-      navigation.navigate(item.screen);
-    } else {
-      Alert.alert(item.name, "This feature is coming soon.");
+      navigation.navigate(item.screen, item.params);
     }
   };
+
+  let currentRoute = state.routes[state.index];
+  while (currentRoute.state) {
+    currentRoute = currentRoute.state.routes[currentRoute.state.index];
+  }
+  const focusedRouteName = currentRoute.name;
 
   return (
     <View
@@ -66,26 +137,47 @@ export default function DrawerContent() {
         </Text>
       </View>
 
-      {drawerItems.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={styles.row}
-          onPress={() => handlePress(item)}
-          accessibilityRole="button"
-          accessibilityLabel={item.name}
-          activeOpacity={0.7}
-        >
-          <Feather
-            name={item.icon}
-            size={20}
-            color={theme.colors.text.primary}
-            style={{ width: 26 }}
-          />
-          <Text style={[styles.label, { color: theme.colors.text.primary }]}>
-            {item.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
+      {drawerItems.map((item) => {
+        const isFocused = item.routeName === focusedRouteName;
+        return (
+          <TouchableOpacity
+            key={item.name}
+            style={[
+              styles.row,
+              isFocused && {
+                backgroundColor: theme.colors.background.tertiary,
+              },
+            ]}
+            onPress={() => handlePress(item)}
+            accessibilityRole="button"
+            accessibilityLabel={item.name}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name={item.icon}
+              size={20}
+              color={
+                isFocused
+                  ? theme.colors.primary.main
+                  : theme.colors.text.primary
+              }
+              style={{ width: 26 }}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: theme.colors.text.primary },
+                isFocused && {
+                  fontWeight: "600",
+                  color: theme.colors.primary.main,
+                },
+              ]}
+            >
+              {item.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }

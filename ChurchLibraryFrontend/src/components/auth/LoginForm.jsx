@@ -1,7 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  loginUser,
+  selectIsLoading,
+  selectAuthError,
+  clearError,
+} from "../../store/slices/authSlice";
 import Button from "../common/Button";
 import Card from "../common/Card";
 import LoadingSpinner from "../common/LoadingSpinner";
@@ -20,8 +27,11 @@ const schema = yup
   })
   .required();
 
-const LoginForm = ({ onSubmit, isLoading = false }) => {
+const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch();
+  const isLoading = useSelector(selectIsLoading);
+  const authError = useSelector(selectAuthError);
 
   const {
     register,
@@ -31,8 +41,13 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
     resolver: yupResolver(schema),
   });
 
+  // Clear any previous errors when the component mounts
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
   const handleFormSubmit = (data) => {
-    onSubmit(data);
+    dispatch(loginUser(data));
   };
 
   return (
@@ -43,6 +58,13 @@ const LoginForm = ({ onSubmit, isLoading = false }) => {
         </h2>
         <p className="text-h4 mt-2">Sign in to your Church Library account</p>
       </div>
+
+      {authError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong className="font-bold">Login Failed: </strong>
+          <span className="block sm:inline">{authError}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
         <div>

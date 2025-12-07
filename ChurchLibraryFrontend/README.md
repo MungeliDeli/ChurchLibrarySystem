@@ -2,6 +2,27 @@
 
 A modern React-based admin dashboard for managing church library operations.
 
+---
+
+## ⚙️ How to Run This Project
+
+To ensure the application runs correctly with all the latest changes, please follow these steps in order in the `ChurchLibraryFrontend` directory.
+
+**Prerequisite:** The backend server must be running first. Please follow the instructions in `ChurchLibraryBackend/Readme.md`.
+
+**1. Install Dependencies:** This installs all required libraries.
+```bash
+npm install
+```
+
+**2. Start the Development Server:**
+```bash
+npm run dev
+```
+The frontend will now be running, typically on `http://localhost:5173`.
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 19 + Vite
@@ -106,3 +127,24 @@ The project uses Tailwind CSS v4 with the new `@theme` directive. See `src/style
 ## 📄 License
 
 This project is part of the Church Library Management System.
+
+---
+
+## ✅ Current Status (as of recent changes)
+
+### Implemented Features:
+- **Backend Connection:** The frontend is fully connected to the backend API.
+- **State Management:** Redux Toolkit is implemented for managing application state for Authentication, Books, Categories, and UI.
+- **Authentication:**
+    - The login page is functional and authenticates against the backend `/api/auth/login` endpoint.
+    - JWT tokens are stored and automatically sent with subsequent API requests.
+    - The application correctly redirects based on authentication status.
+- **Library Page:**
+    - A tabbed interface allows for managing both Books and Categories.
+    - **Book Management:** Full CRUD (Create, Read, Update, Delete) functionality is implemented. The Create and Edit modals now support file uploads for book files, which are sent to the backend for S3 storage.
+    - **Category Management:** Full CRUD functionality is implemented for categories.
+- **User Feedback:**
+    - A Toast notification system is in place to provide feedback for actions like failed deletions.
+    - Loading states are handled, showing spinners while data is being fetched.
+- **Data Integrity:**
+    - The frontend now displays a user-friendly error when attempting to delete a category that is in use, based on the backend's logic.

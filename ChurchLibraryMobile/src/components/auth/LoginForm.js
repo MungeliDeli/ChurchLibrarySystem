@@ -30,10 +30,9 @@ export default function LoginForm({ onSuccess }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 500));
       const res = await loginService(values);
       if (res?.ok) {
-        authenticate({ id: values.email, email: values.email });
+        authenticate(res.data.user);
         onSuccess && onSuccess();
       } else {
         Alert.alert("Login failed", res?.message || "Please try again.");

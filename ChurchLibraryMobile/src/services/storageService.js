@@ -78,3 +78,17 @@ export async function secureRemove(key) {
     return false;
   }
 }
+
+const USER_TOKEN_KEY = 'userToken';
+
+export async function getUserToken() {
+  return secureGet(USER_TOKEN_KEY);
+}
+
+export async function setUserToken(token) {
+  return secureSet(USER_TOKEN_KEY, token);
+}
+
+export async function removeUserToken() {
+  return secureRemove(USER_TOKEN_KEY);
+}

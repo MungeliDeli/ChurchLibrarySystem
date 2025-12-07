@@ -31,11 +31,11 @@ app.use(express.json());
 
 // API Routes
 const authRoutes = require('./src/routes/auth.routes');
-const libraryRoutes = require('./src/routes/library.routes');
+const libraryRoutes = require('./src/routes/library.routes.js');
 app.use('/api/auth', authRoutes);
 app.use('/api/books', libraryRoutes);
 
-const categoryRoutes = require('./src/routes/category.routes');
+const categoryRoutes = require('./src/routes/category.routes.js');
 app.use('/api/categories', categoryRoutes);
 
 // Test Database Connection

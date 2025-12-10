@@ -62,19 +62,19 @@ const Sidebar = ({ isOpen }) => {
 
   const sidebarClasses = clsx(
     "fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out",
-    "bg-[var(--color-background)] border-r border-[var(--color-border)]",
+    "bg-[var(--color-sidebar-bg)] border-r border-[var(--color-sidebar-border)]",
 
     isOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full"
   );
 
   const headerClasses = clsx(
-    "flex items-center justify-center h-16 border-b border-[var(--color-border)] transition-all duration-300",
+    "flex items-center justify-center h-16 border-b border-[var(--color-sidebar-border)] transition-all duration-300",
     "px-4"
   );
 
   const logoClasses = clsx(
     "font-bold transition-all duration-300 flex items-center space-x-2",
-    "text-xl"
+    "text-xl text-[var(--color-sidebar-text)]"
   );
 
   return (
@@ -100,19 +100,19 @@ const Sidebar = ({ isOpen }) => {
                   to={item.href}
                   className={clsx(
                     "group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200",
-                    "hover:bg-[var(--color-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-inset",
+                    "hover:bg-[var(--color-sidebar-hover)] focus:outline-none focus:ring-2 focus:ring-white focus:ring-inset",
 
                     isActive
                       ? clsx(
-                          "bg-[var(--color-surface)] text-[var(--color-primary-text)] border-r-2 border-[var(--color-accent)]"
+                          "bg-[var(--color-sidebar-active)] text-[var(--color-sidebar-text)] border-r-2 border-white"
                         )
                       : clsx(
-                          "text-[var(--color-secondary-text)] hover:text-[var(--color-primary-text)]"
+                          "text-[var(--color-sidebar-text-secondary)] hover:text-[var(--color-sidebar-text)]"
                         )
                   )}
                   title={item.description}
                 >
-                  <item.icon className="text-lg mr-3 text-[var(--color-primary)]" />
+                  <item.icon className="text-lg mr-3 text-[var(--color-sidebar-text)]" />
                   <span className="truncate">{item.name}</span>
                 </Link>
               </li>
@@ -123,20 +123,21 @@ const Sidebar = ({ isOpen }) => {
 
       {/* User Info Section */}
       {user && (
-        <div className={clsx("absolute bottom-0 left-0 right-0 p-4 border-t")}>
+        <div className={clsx("absolute bottom-0 left-0 right-0 p-4 border-t border-[var(--color-sidebar-border)]")}>
           <div className="flex items-center space-x-3">
             <div
               className={clsx(
-                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                "bg-white text-[var(--color-sidebar-bg)]"
               )}
             >
               {user.name?.charAt(0)?.toUpperCase() || "U"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={clsx("text-sm font-medium truncate")}>
+              <p className={clsx("text-sm font-medium truncate text-[var(--color-sidebar-text)]")}>
                 {user.name || "User"}
               </p>
-              <p className={clsx("text-xs truncate")}>{user.role || "User"}</p>
+              <p className={clsx("text-xs truncate text-[var(--color-sidebar-text-secondary)]")}>{user.role || "User"}</p>
             </div>
           </div>
         </div>

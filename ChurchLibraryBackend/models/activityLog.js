@@ -31,6 +31,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     ipAddress: {
       type: DataTypes.STRING(45)
+    },
+    isArchived: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     sequelize,

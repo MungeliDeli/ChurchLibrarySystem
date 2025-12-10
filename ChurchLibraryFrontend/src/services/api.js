@@ -602,6 +602,51 @@ export const settingsAPI = {
   },
 };
 
+export const activityLogsAPI = {
+  getActivityLogs: async (params = {}) => {
+    try {
+      const response = await api.get("/activity/logs", { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to fetch activity logs"));
+    }
+  },
+
+  exportActivityLogs: async (params = {}, format = "json") => {
+    try {
+      const response = await api.get("/activity/export", {
+        params: { ...params, format },
+        responseType: "blob",
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const extension = format === "csv" ? "csv" : "json";
+      link.download = `activity-logs-${Date.now()}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return { success: true };
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to export activity logs"));
+    }
+  },
+
+  archiveActivityLogs: async (data) => {
+    try {
+      const response = await api.post("/activity/archive", data);
+      return response.data;
+    } catch (error) {
+      throw new Error(handleError(error, "Failed to archive activity logs"));
+    }
+  },
+};
+
 // Utility function to check API health
 export const checkAPIHealth = async () => {
   try {

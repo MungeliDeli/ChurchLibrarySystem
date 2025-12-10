@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -7,10 +7,11 @@ import {
   fetchCategories,
   selectAllCategories,
 } from "../../store/slices/categorySlice";
-import { createBook, selectBooksLoading, selectBooksError } from "../../store/slices/bookSlice";
+import { createBook, selectBooksLoading, selectBooksError, selectUploadProgress, setUploadProgress } from "../../store/slices/bookSlice";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
 import LoadingSpinner from "../common/LoadingSpinner";
+import ProgressBar from "../common/ProgressBar";
 
 const schema = yup.object({
   title: yup.string().required("Title is required"),
@@ -31,6 +32,7 @@ const CreateBookModal = ({ isOpen, onClose }) => {
   const categories = useSelector(selectAllCategories);
   const isLoading = useSelector(selectBooksLoading);
   const error = useSelector(selectBooksError);
+  const uploadProgress = useSelector(selectUploadProgress);
 
   const {
     register,
@@ -68,7 +70,7 @@ const CreateBookModal = ({ isOpen, onClose }) => {
     });
     
     try {
-      await dispatch(createBook(formData)).unwrap();
+      await dispatch(createBook({ bookData: formData })).unwrap();
       // If successful, close modal and reset form
       onClose();
       reset();
@@ -164,6 +166,13 @@ const CreateBookModal = ({ isOpen, onClose }) => {
           />
           {errors.bookFile && <p className="mt-1 text-sm text-red-600">{errors.bookFile.message}</p>}
         </div>
+
+        {isLoading && (
+          <div>
+            <ProgressBar progress={uploadProgress} />
+            <p className="text-sm text-center mt-2">{uploadProgress}% uploaded</p>
+          </div>
+        )}
 
         <div className="flex justify-end space-x-4">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -8,7 +8,10 @@ import { isEmail } from "../../utils/helpers";
 import uuid from "react-native-uuid";
 import { register as registerService } from "../../services/authService";
 
-export default function RegisterForm({ submitLabel = "Create Account" }) {
+export default function RegisterForm({
+  submitLabel = "Create Account",
+  onSuccess,
+}) {
   const { theme } = useTheme();
   const { authenticate } = useAuth();
 
@@ -37,15 +40,11 @@ export default function RegisterForm({ submitLabel = "Create Account" }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 800));
       const res = await registerService(values);
       if (res?.ok) {
-        const user = {
-          id: String(uuid.v4()),
-          name: values.name.trim(),
-          email: values.email.trim(),
-        };
-        authenticate(user);
+        Alert.alert("Registration successful", "You can now log in.", [
+          { text: "OK", onPress: () => onSuccess && onSuccess() },
+        ]);
       } else {
         Alert.alert("Registration failed", res?.message || "Please try again.");
       }

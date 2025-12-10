@@ -1,10 +1,11 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/main/HomeScreen";
-import LibraryScreen from "../screens/main/LibraryScreen";
+import LibraryStack from "./LibraryStack";
 import BibleScreen from "../screens/main/BibleScreen";
+import LibraryScreen from "../screens/main/LibraryScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { BackHandler, Platform, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import useTheme from "../hooks/useTheme";
@@ -15,25 +16,6 @@ export default function TabNavigator() {
   const { theme, isDark } = useTheme();
   const navigation = useNavigation();
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (Platform.OS !== "android") return;
-      const onBackPress = () => {
-        // Exit app if on a root tab and cannot go back
-        if (!navigation.canGoBack()) {
-          BackHandler.exitApp();
-          return true;
-        }
-        return false;
-      };
-      const sub = BackHandler.addEventListener(
-        "hardwareBackPress",
-        onBackPress
-      );
-      return () => sub.remove();
-    }, [navigation])
-  );
-
   const tabBarActive = theme.colors.primary.main;
   const tabBarInactive = isDark
     ? theme.colors.text.tertiary
@@ -41,7 +23,14 @@ export default function TabNavigator() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ navigation }) => ({
+      screenOptions={({ route, navigation }) => ({
+        headerShown: ((route) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'LibraryList';
+          if (routeName === 'BookReader') {
+            return false;
+          }
+          return true;
+        })(route),
         headerStyle: { backgroundColor: theme.colors.primary.main },
         headerTitleStyle: { color: theme.colors.text.inverse },
         headerTintColor: theme.colors.text.inverse,
@@ -72,13 +61,20 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Library"
-        component={LibraryScreen}
-        options={{
+        component={LibraryStack}
+        options={({ route }) => ({
           tabBarLabel: "Library",
           tabBarIcon: ({ color, size }) => (
             <Feather name="book" size={size} color={color} />
           ),
-        }}
+          tabBarStyle: ((route) => {
+            const routeName = getFocusedRouteNameFromRoute(route) ?? 'LibraryList';
+            if (routeName === 'BookReader') {
+              return { display: 'none' };
+            }
+            return { backgroundColor: theme.colors.components.tabBar };
+          })(route),
+        })}
       />
       <Tab.Screen
         name="Bible"

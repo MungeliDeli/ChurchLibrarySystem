@@ -48,6 +48,11 @@ module.exports = (sequelize, DataTypes) => {
         model: 'Categories',
         key: 'categoryId'
       }
+    },
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
     }
   }, {
     sequelize,

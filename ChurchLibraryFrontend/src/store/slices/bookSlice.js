@@ -5,6 +5,7 @@ const initialState = {
   items: [],
   isLoading: false,
   error: null,
+  uploadProgress: 0,
 };
 
 // Async thunk to fetch books
@@ -23,9 +24,12 @@ export const fetchBooks = createAsyncThunk(
 // Async thunk to create a new book
 export const createBook = createAsyncThunk(
   "books/createBook",
-  async (bookData, { rejectWithValue }) => {
+  async ({ bookData, onUploadProgress }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await booksAPI.createBook(bookData);
+      const response = await booksAPI.createBook(bookData, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        dispatch(setUploadProgress(progress));
+      });
       return response.data.item; // The backend returns { message, item }
     } catch (error) {
       return rejectWithValue(error.message || "Failed to create book");
@@ -66,6 +70,9 @@ const bookSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setUploadProgress: (state, action) => {
+      state.uploadProgress = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -86,14 +93,17 @@ const bookSlice = createSlice({
       .addCase(createBook.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.uploadProgress = 0;
       })
       .addCase(createBook.fulfilled, (state, action) => {
         state.isLoading = false;
         state.items.unshift(action.payload);
+        state.uploadProgress = 0;
       })
       .addCase(createBook.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        state.uploadProgress = 0;
       })
       // Update Book
       .addCase(updateBook.pending, (state) => {
@@ -127,11 +137,12 @@ const bookSlice = createSlice({
   },
 });
 
-export const { clearError } = bookSlice.actions;
+export const { clearError, setUploadProgress } = bookSlice.actions;
 
 // Selectors
 export const selectAllBooks = (state) => state.books.items;
 export const selectBooksLoading = (state) => state.books.isLoading;
 export const selectBooksError = (state) => state.books.error;
+export const selectUploadProgress = (state) => state.books.uploadProgress;
 
 export default bookSlice.reducer;

@@ -126,7 +126,7 @@ export default function AuthScreen({ route, navigation }) {
                 Create an account to explore the latest books and resources.
               </Text>
               <View style={{ height: 12 }} />
-              <RegisterForm submitLabel="Sign up" />
+              <RegisterForm submitLabel="Sign up" onSuccess={() => setMode('login')} />
               <View style={{ height: 16 }} />
               <TouchableOpacity
                 onPress={() => setMode("login")}

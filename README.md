@@ -250,3 +250,18 @@ The React application can be deployed to:
 - **Production**: Build standalone apps for App Store and Google Play
 - **Enterprise**: Internal distribution for church staff
 
+## 📈 Recent Updates
+
+### 2025-11-18
+- **Feature: Title-Based Filenames for S3 Uploads**
+  - Book files and thumbnails uploaded to S3 are now named based on the book's title for better organization and readability.
+
+- **Fix: Book Creation Timeout**
+  - Resolved a critical bug where creating books with large PDF files would time out. The frontend API timeout has been significantly increased to 10 minutes to accommodate large file uploads and processing.
+
+- **Fix: Mobile App Thumbnail Generation and Display**
+  - Fixed an issue where thumbnails were not being generated or displayed correctly in the mobile app. The backend now correctly handles in-memory file buffers for thumbnail generation, and the mobile app's detail screen now displays the cover image.
+
+- **Fix: Robust Book Deletion**
+  - Improved the reliability of the delete functionality. The process is now more robust, ensuring that failures during S3 file deletion are properly handled to prevent orphaned files and inconsistent application state.
+

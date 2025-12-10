@@ -13,8 +13,8 @@
 /* Theme layer for custom properties */
 @layer theme {
   :root {
-    --color-primary: #d4a373; /* #007A20 */
-    --color-accent: rgb(203, 160, 113);
+    --color-primary: #000042; /* #007A20 */
+    --color-accent: rgb(98, 152, 214);
     --color-error: #ff0000;
     --color-background: hsl(0, 0%, 98%); /* Light mode bg */
     --color-surface: #efefef; /* Light surface (search, active, etc.) */
@@ -43,6 +43,13 @@
     --color-error-surface: rgba(255, 0, 0, 0.1);
     --color-error-border: rgba(255, 0, 0, 0.24);
     --color-error-text: #7f1d1d;
+    /* Sidebar colors - deep navy blue with white text */
+    --color-sidebar-bg: #000042;
+    --color-sidebar-text: #ffffff;
+    --color-sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+    --color-sidebar-border: rgba(255, 255, 255, 0.1);
+    --color-sidebar-hover: rgba(255, 255, 255, 0.1);
+    --color-sidebar-active: rgba(255, 255, 255, 0.15);
   }
   .dark {
     --color-background: #121212; /* #121212 */
@@ -74,6 +81,13 @@
     --color-error-surface: rgba(248, 113, 113, 0.24);
     --color-error-border: rgba(248, 113, 113, 0.32);
     --color-error-text: #fecaca;
+    /* Sidebar colors - deep navy blue with white text (same for dark mode) */
+    --color-sidebar-bg: #000042;
+    --color-sidebar-text: #ffffff;
+    --color-sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+    --color-sidebar-border: rgba(255, 255, 255, 0.1);
+    --color-sidebar-hover: rgba(255, 255, 255, 0.1);
+    --color-sidebar-active: rgba(255, 255, 255, 0.15);
   }
 }
 

@@ -2,7 +2,7 @@
 const COLORS = {
   // Primary brand color
   primary: {
-    main: "#d4a373", // --buff color
+    main: "#000042", // --buff color
     light: "#e4c4a1",
     dark: "#b8935f",
     contrast: "#ffffff",
@@ -10,7 +10,7 @@ const COLORS = {
 
   // Secondary colors (warm earth tones)
   secondary: {
-    main: "#a0673b",
+    main: "#000042",
     light: "#c8956d",
     dark: "#7d4f2c",
     contrast: "#ffffff",

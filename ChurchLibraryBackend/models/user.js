@@ -103,7 +103,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'User',
-      tableName: 'Users', // Explicitly set table name to PascalCase
+      tableName: 'Users',
       timestamps: true,
       underscored: false,
       hooks: {
@@ -114,7 +114,7 @@ module.exports = (sequelize, DataTypes) => {
           }
         },
         beforeUpdate: async (user) => {
-          if (user.changed('password')) {
+          if (typeof user.changed === 'function' && user.changed('password')) {
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(user.password, salt);
           }

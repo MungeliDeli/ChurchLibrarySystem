@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { getUserToken } from './storageService';
 
 // Function to construct the base URL
 const getBaseURL = () => {
@@ -39,7 +40,6 @@ const api = axios.create({
 // Request interceptor to add the auth token to headers
 api.interceptors.request.use(
   async (config) => {
-    const { getUserToken } = require('./storageService');
     const token = await getUserToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

@@ -55,20 +55,27 @@ exports.getTrending = async (req, res) => {
                     [Op.gte]: thirtyDaysAgo
                 }
             },
+            group: ['affectedResource'],
+            order: [[Sequelize.literal('activityCount'), 'DESC']],
+            limit: 10
         });
 
         console.log('trendingItems:', trendingItems);
 
-        const itemIds = trendingItems.map(item => item.get('affectedResource'));
+        const itemIds = trendingItems.map(item => item.affectedResource);
 
-        if (itemIds.length === 0) {
+        // Filter out invalid UUIDs
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const validItemIds = itemIds.filter(id => id && uuidRegex.test(id));
+
+        if (validItemIds.length === 0) {
             return res.json([]);
         }
 
         const libraryItems = await LibraryItem.findAll({
             where: {
                 itemId: {
-                    [Op.in]: itemIds
+                    [Op.in]: validItemIds
                 }
             },
             include: [{

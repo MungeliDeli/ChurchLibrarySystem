@@ -27,6 +27,9 @@ app.use('/api/activity', activityRoutes);
 const progressRoutes = require('./routes/progress.routes.js');
 app.use('/api/progress', progressRoutes);
 
+const annotationRoutes = require('./routes/annotation.routes');
+app.use('/api/annotations', annotationRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EPUB Reader</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden; /* Prevent scrolling the body */
+    }
+    #viewer {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+
+  <script>
+    const viewer = document.getElementById("viewer");
+    let rendition;
+    let book;
+
+    const log = (message) => {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: "log", data: message }));
+    };
+
+    log("WebView script loaded for paginated view with swipe gestures.");
+
+    document.addEventListener("message", function(event) {
+      try {
+        const messageData = JSON.parse(event.data);
+        if (messageData.bookData) {
+          log("Book data received.");
+          book = ePub(messageData.bookData, { encoding: "base64" });
+          log("ePub initialized.");
+
+          rendition = book.renderTo(viewer, {
+            width: "100%",
+            height: "100%"
+          });
+          log("Rendition created for paginated view.");
+
+          rendition.on("displayed", () => {
+            log("Rendition displayed.");
+          });
+
+          rendition.display();
+          log("rendition.display() called.");
+
+          // --- epub.js Official Method for Swipe Detection ---
+          let touchStartX = 0;
+          let touchEndX = 0;
+          const swipeThreshold = 50; // Minimum pixel distance for a swipe
+
+          rendition.on('touchstart', event => {
+            touchStartX = event.changedTouches[0].screenX;
+          });
+
+          rendition.on('touchend', event => {
+            touchEndX = event.changedTouches[0].screenX;
+            handleSwipe();
+          });
+
+          function handleSwipe() {
+            const swipeDistance = touchEndX - touchStartX;
+            if (swipeDistance < -swipeThreshold) { // Swipe left
+              log("Swipe left detected. Turning to next page.");
+              rendition.next();
+            } else if (swipeDistance > swipeThreshold) { // Swipe right
+              log("Swipe right detected. Turning to previous page.");
+              rendition.prev();
+            }
+          }
+        }
+      } catch (e) {
+        log("ERROR: " + e.message + " | stack: " + e.stack);
+      }
+    });
+
+  </script>
+</body>
+</html>

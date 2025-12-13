@@ -40,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     note: {
       type: DataTypes.TEXT
+    },
+    isNote: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     }
   }, {
     sequelize,

@@ -1,6 +1,6 @@
 const db = require('../../models');
 const { uploadFileToS3, getSignedUrlForS3Key, deleteFileFromS3 } = require('../utils/s3');
-const { generateThumbnailFromPdf } = require('../utils/thumbnail');
+const { generateThumbnailFromPdf, generateThumbnailFromEpub } = require('../utils/thumbnail');
 const fs = require('fs');
 const path = require('path');
 
@@ -56,17 +56,18 @@ exports.createItem = async (req, res) => {
       itemData.fileUrl = fileKey; // Storing the key in fileUrl
       console.log("S3 Upload successful. Key:", fileKey);
 
-      // Generate thumbnail if it's a PDF
-      if (req.file.mimetype === 'application/pdf') {
-        const tempDir = path.join(__dirname, '..', '..', 'temp');
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-        const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
-        fs.writeFileSync(tempPdfPath, req.file.buffer);
+      // --- Thumbnail Generation ---
+      const tempDir = path.join(__dirname, '..', '..', 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
 
-        try {
-          const thumbnailPath = await generateThumbnailFromPdf(tempPdfPath, tempDir);
+      let tempFilePath;
+      try {
+        if (req.file.mimetype === 'application/pdf') {
+          tempFilePath = path.join(tempDir, `${uuidv4()}.pdf`);
+          fs.writeFileSync(tempFilePath, req.file.buffer);
+          const thumbnailPath = await generateThumbnailFromPdf(tempFilePath, tempDir);
           const thumbnailFileName = `${sanitizedTitle}-thumbnail.jpg`;
           const thumbnailFile = {
             path: thumbnailPath,
@@ -76,13 +77,31 @@ exports.createItem = async (req, res) => {
           };
           const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
           itemData.coverImageUrl = thumbnailKey;
-          console.log("Thumbnail Upload successful. Key:", thumbnailKey);
-          fs.unlinkSync(thumbnailPath); // Clean up the generated thumbnail
-        } catch (thumbError) {
-          console.error("--- ERROR generating thumbnail ---", thumbError);
-          // Proceed without a thumbnail
-        } finally {
-          fs.unlinkSync(tempPdfPath); // Clean up the temporary PDF file
+          console.log("PDF Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath);
+
+        } else if (req.file.mimetype === 'application/epub+zip') {
+          tempFilePath = path.join(tempDir, `${uuidv4()}.epub`);
+          fs.writeFileSync(tempFilePath, req.file.buffer);
+          const thumbnailPath = await generateThumbnailFromEpub(tempFilePath, tempDir);
+          const thumbnailFileName = `${sanitizedTitle}-thumbnail${path.extname(thumbnailPath)}`;
+          const thumbnailFile = {
+            path: thumbnailPath,
+            originalname: path.basename(thumbnailPath),
+            mimetype: `image/${path.extname(thumbnailPath).substring(1)}`,
+            buffer: fs.readFileSync(thumbnailPath)
+          };
+          const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
+          itemData.coverImageUrl = thumbnailKey;
+          console.log("EPUB Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath);
+        }
+      } catch (thumbError) {
+        console.error("--- ERROR generating thumbnail ---", thumbError);
+        // Proceed without a thumbnail
+      } finally {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath); // Clean up the temporary file
         }
       }
     } else {
@@ -202,17 +221,19 @@ exports.updateItem = async (req, res) => {
       updateData.fileUrl = fileKey;
       console.log("S3 Upload successful. Key:", fileKey);
 
-      // Generate thumbnail if it's a PDF
-      if (req.file.mimetype === 'application/pdf') {
-        const tempDir = path.join(__dirname, '..', '..', 'temp');
-        if (!fs.existsSync(tempDir)) {
-          fs.mkdirSync(tempDir, { recursive: true });
-        }
-        const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
-        fs.writeFileSync(tempPdfPath, req.file.buffer);
+      // Generate thumbnail for PDF or EPUB
+      const tempDir = path.join(__dirname, '..', '..', 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      let tempFilePath;
+      try {
+        if (req.file.mimetype === 'application/pdf') {
+          tempFilePath = path.join(tempDir, `${uuidv4()}.pdf`);
+          fs.writeFileSync(tempFilePath, req.file.buffer);
 
-        try {
-          const thumbnailPath = await generateThumbnailFromPdf(tempPdfPath, tempDir);
+          const thumbnailPath = await generateThumbnailFromPdf(tempFilePath, tempDir);
           const thumbnailFileName = `${sanitizedTitle}-thumbnail.jpg`;
           const thumbnailFile = {
             path: thumbnailPath,
@@ -222,13 +243,32 @@ exports.updateItem = async (req, res) => {
           };
           const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
           updateData.coverImageUrl = thumbnailKey;
-          console.log("Thumbnail Upload successful. Key:", thumbnailKey);
-          fs.unlinkSync(thumbnailPath); // Clean up the generated thumbnail
-        } catch (thumbError) {
-          console.error("--- ERROR generating thumbnail ---", thumbError);
-          // Proceed without a thumbnail
-        } finally {
-          fs.unlinkSync(tempPdfPath); // Clean up the temporary PDF file
+          console.log("PDF Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath);
+
+        } else if (req.file.mimetype === 'application/epub+zip') {
+          tempFilePath = path.join(tempDir, `${uuidv4()}.epub`);
+          fs.writeFileSync(tempFilePath, req.file.buffer);
+
+          const thumbnailPath = await generateThumbnailFromEpub(tempFilePath, tempDir);
+          const thumbnailFileName = `${sanitizedTitle}-thumbnail${path.extname(thumbnailPath)}`;
+          const thumbnailFile = {
+            path: thumbnailPath,
+            originalname: path.basename(thumbnailPath),
+            mimetype: `image/${path.extname(thumbnailPath).substring(1)}`,
+            buffer: fs.readFileSync(thumbnailPath)
+          };
+          const thumbnailKey = await uploadFileToS3(thumbnailFile, thumbnailFileName);
+          updateData.coverImageUrl = thumbnailKey;
+          console.log("EPUB Thumbnail Upload successful. Key:", thumbnailKey);
+          fs.unlinkSync(thumbnailPath);
+        }
+      } catch (thumbError) {
+        console.error("--- ERROR generating thumbnail ---", thumbError);
+        // Proceed without a thumbnail
+      } finally {
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath); // Clean up the temporary file
         }
       }
     } else {

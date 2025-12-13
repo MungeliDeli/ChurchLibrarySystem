@@ -16,7 +16,11 @@ async function login({ email, password }) {
     const { token, user } = response.data;
 
     if (token) {
-      await storage.setUserToken(token);
+      // Defensive check: ensure token is a string before saving.
+      const tokenToSave = typeof token === 'string' ? token : JSON.stringify(token);
+      console.log('Attempting to save token:', tokenToSave);
+
+      await storage.setUserToken(tokenToSave);
       await storage.setJson('user', user);
       return { ok: true, data: { user } };
     }

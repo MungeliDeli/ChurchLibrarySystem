@@ -64,16 +64,16 @@ const MobileMenu = () => {
       />
 
       {/* Mobile menu panel */}
-      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-background)] shadow-xl transform transition-transform duration-300 ease-in-out">
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-sidebar-bg)] shadow-xl transform transition-transform duration-300 ease-in-out">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-primary-text)]">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--color-sidebar-border)]">
+            <h2 className="text-lg font-semibold text-[var(--color-sidebar-text)]">
               Church Library
             </h2>
             <button
               onClick={handleClose}
-              className="p-2 rounded-md text-[var(--color-secondary-text)] hover:text-[var(--color-primary-text)] hover:bg-[var(--color-surface)]"
+              className="p-2 rounded-md text-[var(--color-sidebar-text-secondary)] hover:text-[var(--color-sidebar-text)] hover:bg-[var(--color-sidebar-hover)]"
             >
               <svg
                 className="h-6 w-6"
@@ -103,14 +103,14 @@ const MobileMenu = () => {
                   className={clsx(
                     "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-[var(--color-surface)] text-[var(--color-primary-text)]"
-                      : "text-[var(--color-secondary-text)] hover:bg-[var(--color-surface)]"
+                      ? "bg-[var(--color-sidebar-active)] text-[var(--color-sidebar-text)]"
+                      : "text-[var(--color-sidebar-text-secondary)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-sidebar-text)]"
                   )}
                 >
-                  <item.icon className="mr-3 text-lg text-[var(--color-primary)]" />
+                  <item.icon className="mr-3 text-lg text-[var(--color-sidebar-text)]" />
                   <div>
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-xs text-[var(--color-secondary-text)]">
+                    <div className="text-xs text-[var(--color-sidebar-text-secondary)]">
                       {item.description}
                     </div>
                   </div>
@@ -120,8 +120,8 @@ const MobileMenu = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-[var(--color-border)]">
-            <div className="text-xs text-[var(--color-secondary-text)] text-center">
+          <div className="p-4 border-t border-[var(--color-sidebar-border)]">
+            <div className="text-xs text-[var(--color-sidebar-text-secondary)] text-center">
               Church Library Admin
             </div>
           </div>

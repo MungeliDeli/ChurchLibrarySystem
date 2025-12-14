@@ -5,7 +5,7 @@ import { getUserToken } from './storageService';
 
 // Function to construct the base URL
 const getBaseURL = () => {
-	const MANUAL_IP = '10.178.246.123'; //IP address
+	const MANUAL_IP = '10.108.119.123'; //IP address
 
 	// If running in development on a physical device, it will use your computer's IP address.
 	// If running in an emulator, it will use the correct localhost address.

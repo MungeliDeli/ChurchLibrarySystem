@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button, Linking, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Button, Image, ScrollView } from 'react-native';
 import useTheme from '../../hooks/useTheme';
 
 function BookDetailsScreen({ route, navigation }) {
@@ -8,7 +8,23 @@ function BookDetailsScreen({ route, navigation }) {
 
   const handleRead = () => {
     if (book.downloadUrl) {
-      navigation.navigate('BookReader', { downloadUrl: book.downloadUrl, itemId: book.itemId });
+      // Determine format from book.format or file extension
+      let format = 'epub'; // default
+      if (book.format) {
+        format = book.format.toLowerCase();
+      } else if (book.downloadUrl) {
+        if (book.downloadUrl.includes('.pdf')) {
+          format = 'pdf';
+        } else if (book.downloadUrl.includes('.epub')) {
+          format = 'epub';
+        }
+      }
+
+      navigation.navigate('BookReader', { 
+        downloadUrl: book.downloadUrl, 
+        itemId: book.itemId,
+        format: format
+      });
     }
   };
 
@@ -19,8 +35,17 @@ function BookDetailsScreen({ route, navigation }) {
           <Image source={{ uri: book.coverImageUrl }} style={styles.bookCover} />
         )}
         <Text style={[styles.title, { color: theme.colors.text.primary }]}>{book.title}</Text>
-        <Text style={[styles.author, { color: theme.colors.text.secondary }]}>by {book.authors.join(', ')}</Text>
-        <Text style={[styles.description, { color: theme.colors.text.primary }]}>{book.description}</Text>
+        <Text style={[styles.author, { color: theme.colors.text.secondary }]}>
+          by {book.authors.join(', ')}
+        </Text>
+        {book.format && (
+          <Text style={[styles.format, { color: theme.colors.text.tertiary }]}>
+            Format: {book.format.toUpperCase()}
+          </Text>
+        )}
+        <Text style={[styles.description, { color: theme.colors.text.primary }]}>
+          {book.description}
+        </Text>
         {book.downloadUrl && (
           <Button title="Read Book" onPress={handleRead} />
         )}
@@ -33,10 +58,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    // alignItems: 'center', // Removed from here
   },
   scrollContent: {
-    alignItems: 'center', // Applied here
+    alignItems: 'center',
   },
   bookCover: {
     width: 200,
@@ -52,12 +76,19 @@ const styles = StyleSheet.create({
   },
   author: {
     fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  format: {
+    fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',
+    fontStyle: 'italic',
   },
   description: {
     fontSize: 14,
     textAlign: 'center',
+    marginBottom: 16,
   },
 });
 

@@ -11,18 +11,26 @@ const html = `
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
   <style>
-    body {
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
     }
     #viewer {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
     }
     .hl {
-        fill-opacity: 0.3;
-        mix-blend-mode: multiply;
+      background-color: rgba(255, 255, 0, 0.3);
+      cursor: pointer;
     }
   </style>
 </head>
@@ -35,10 +43,10 @@ const html = `
     let book;
 
     const log = (message) => {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: "log", data: message }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "log", data: message }));
     };
 
-    log("WebView script loaded for paginated view with vertical scroll.");
+    log("WebView script loaded for continuous scrolling view.");
 
     document.addEventListener("message", function(event) {
       try {
@@ -48,16 +56,33 @@ const html = `
           book = ePub(messageData.bookData, { encoding: "base64" });
           log("ePub initialized.");
 
+          // Use flow: 'scrolled' for continuous vertical scrolling
           rendition = book.renderTo(viewer, {
             width: "100%",
             height: "100%",
+            flow: "scrolled",
+            manager: "continuous",
+            snap: false
           });
-          log("Rendition created for paginated view.");
+          log("Rendition created for scrolled view.");
 
-          // Hook to make content scrollable
+          // Make content scrollable
           rendition.hooks.content.register(function(contents) {
-            contents.window.document.body.style.overflowY = 'auto';
-            contents.window.document.body.style.height = '100%';
+            const body = contents.window.document.body;
+            const html = contents.window.document.documentElement;
+            
+            // Enable scrolling
+            body.style.overflowY = 'visible';
+            body.style.height = 'auto';
+            body.style.minHeight = '100%';
+            html.style.overflowY = 'visible';
+            html.style.height = 'auto';
+            
+            // Add padding for better readability
+            body.style.paddingLeft = '16px';
+            body.style.paddingRight = '16px';
+            body.style.paddingTop = '16px';
+            body.style.paddingBottom = '16px';
           });
           
           rendition.on("displayed", () => {
@@ -73,7 +98,7 @@ const html = `
           log("rendition.display() called.");
           
           rendition.on('relocated', (location) => {
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: "locationChange", data: location }));
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: "locationChange", data: location }));
           });
 
           rendition.on('selected', (cfiRange, contents) => {
@@ -85,53 +110,32 @@ const html = `
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: "selection", data: selection }));
           });
           
-          rendition.on('annotations.click', (cfiRange, data, contents) => {
-             log("Annotation clicked: " + cfiRange);
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: "highlight-clicked", data: { cfiRange } }));
+          rendition.on('click', (event) => {
+            const selection = event.view.window.getSelection();
+            if (selection.toString().length === 0) {
+              log("Tap detected.");
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: "tapped" }));
+            }
           });
 
-          // --- Swipe and Tap detection for paginated view ---
-          let touchStartX = 0;
-          let touchStartY = 0;
-          const swipeThreshold = 50;
-
-          rendition.on('touchstart', (event) => {
-              touchStartX = event.changedTouches[0].screenX;
-              touchStartY = event.changedTouches[0].screenY;
+          // Handle annotation clicks
+          rendition.on('markClicked', (cfiRange, data, contents) => {
+            log("Annotation clicked: " + cfiRange);
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: "highlight-clicked", data: { cfiRange } }));
           });
-
-          rendition.on('touchend', (event) => {
-              const touchEndX = event.changedTouches[0].screenX;
-              const touchEndY = event.changedTouches[0].screenY;
-              const swipeDistanceX = touchEndX - touchStartX;
-              const swipeDistanceY = Math.abs(touchEndY - touchStartY);
-
-              if (Math.abs(swipeDistanceX) > swipeThreshold && swipeDistanceY < swipeThreshold) {
-                  if (swipeDistanceX < 0) {
-                      rendition.next();
-                  } else {
-                      rendition.prev();
-                  }
-              } else if (Math.abs(swipeDistanceX) < 10 && swipeDistanceY < 10) {
-                  const selection = event.view.window.getSelection();
-                  if (selection.toString().length === 0) {
-                      log("Tap detected.");
-                      window.ReactNativeWebView.postMessage(JSON.stringify({ type: "tapped" }));
-                  }
-              }
-          });
-
 
         } else if (messageData.type === 'highlight') {
-          rendition.annotations.highlight(messageData.cfiRange, {}, () => {}, 'hl', { 'fill': messageData.color });
+          rendition.annotations.add('highlight', messageData.cfiRange, {}, () => {}, 'hl', { 'fill': messageData.color });
         } else if (messageData.type === 'remove-highlight') {
-            rendition.annotations.remove(messageData.cfiRange, 'highlight');
+          rendition.annotations.remove(messageData.cfiRange, 'highlight');
         } else if (messageData.type === 'goTo') {
           log("Received goTo message with cfi: " + messageData.cfi);
           rendition.display(messageData.cfi);
         } else if (messageData.type === 'setFontSize') {
-            log("Received setFontSize message with size: " + messageData.size);
-            rendition.themes.fontSize(messageData.size);
+          log("Received setFontSize message with size: " + messageData.size);
+          // Convert percentage to proper format (e.g., "16px" or just the percentage)
+          const fontSize = messageData.size;
+          rendition.themes.fontSize(fontSize + '%');
         }
       } catch (e) {
         log("ERROR: " + e.message + " | stack: " + e.stack);
@@ -150,7 +154,7 @@ const EpubReader = React.forwardRef(({
     onTap, 
     initialLocation,
     onHighlightClick,
-    fontSize // Added fontSize prop
+    fontSize
 }, ref) => {
   const webViewRef = useRef(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
@@ -183,7 +187,8 @@ const EpubReader = React.forwardRef(({
 
   useEffect(() => {
     if (webViewRef.current && isWebViewReady && fontSize) {
-      webViewRef.current.postMessage(JSON.stringify({ type: 'setFontSize', size: `${fontSize}%` }));
+      // Send just the number, the WebView will add the '%'
+      webViewRef.current.postMessage(JSON.stringify({ type: 'setFontSize', size: fontSize }));
     }
   }, [fontSize, isWebViewReady]);
 
@@ -222,15 +227,10 @@ const EpubReader = React.forwardRef(({
       javaScriptEnabled={true}
       domStorageEnabled={true}
       allowFileAccess={true}
-      // Allow gestures to be handled by the WebView content
-      gestureHandlerProps={{ 
-        onHandlerStateChange: (event) => {
-          // You might need to handle gesture conflicts here if any arise
-        },
-        onGestureEvent: (event) => {
-          // Handle gestures if needed, but for scrolling, this is often enough
-        }
-      }}
+      scrollEnabled={true}
+      showsVerticalScrollIndicator={true}
+      bounces={true}
+      nestedScrollEnabled={true}
     />
   );
 });

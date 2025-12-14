@@ -103,6 +103,13 @@ function BookReaderScreen({ route, navigation }) {
     }
   }, [downloadUrl]);
 
+  // --- Log Reading Activity ---
+  useEffect(() => {
+    if (itemId) {
+      logActivity('Read', itemId).catch(err => console.error("Failed to log activity:", err));
+    }
+  }, [itemId]);
+
   // --- Progress Saving ---
   const saveProgress = useCallback(debounce(async (p) => {
     if (itemId && p > 0) {
@@ -110,10 +117,8 @@ function BookReaderScreen({ route, navigation }) {
     }
   }, 10000), [itemId]);
 
+  // Save final progress on unmount
   useEffect(() => {
-    if (itemId) {
-      logActivity('Read', itemId).catch(err => console.error("Failed to log activity:", err));
-    }
     return () => {
       if (itemId && progress > 0) {
         saveReadingProgress(itemId, progress);

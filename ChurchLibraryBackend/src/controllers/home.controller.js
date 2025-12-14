@@ -1,5 +1,20 @@
 const { LibraryItem, ActivityLog, ReadingProgress, Category } = require('../../models');
 const { Op, Sequelize } = require('sequelize');
+const { getSignedUrlForS3Key } = require('../utils/s3');
+
+// Helper function to sign URLs for a list of items
+const signCoverImageUrls = async (items) => {
+  return Promise.all(
+    items.map(async (item) => {
+      const plainItem = item.toJSON ? item.toJSON() : { ...item };
+      if (plainItem.coverImageUrl) {
+        plainItem.coverImageUrl = await getSignedUrlForS3Key(plainItem.coverImageUrl);
+      }
+      return plainItem;
+    })
+  );
+};
+
 
 // GET /api/home/new-arrivals
 exports.getNewArrivals = async (req, res) => {
@@ -12,7 +27,8 @@ exports.getNewArrivals = async (req, res) => {
                 attributes: ['categoryId', 'name'],
             }],
         });
-        res.json(newArrivals);
+        const signedNewArrivals = await signCoverImageUrls(newArrivals);
+        res.json(signedNewArrivals);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching new arrivals.', error: error.message });
     }
@@ -29,7 +45,8 @@ exports.getFeatured = async (req, res) => {
                 attributes: ['categoryId', 'name'],
             }],
         });
-        res.json(featuredItems);
+        const signedFeaturedItems = await signCoverImageUrls(featuredItems);
+        res.json(signedFeaturedItems);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching featured items.', error: error.message });
     }
@@ -37,7 +54,6 @@ exports.getFeatured = async (req, res) => {
 
 // GET /api/home/trending
 exports.getTrending = async (req, res) => {
-    console.log('getTrending function called');
     try {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -51,16 +67,14 @@ exports.getTrending = async (req, res) => {
                 actionType: {
                     [Op.or]: ['Read', 'Download']
                 },
-                timestamp: {
+                createdAt: {
                     [Op.gte]: thirtyDaysAgo
                 }
             },
             group: ['affectedResource'],
-            order: [[Sequelize.literal('activityCount'), 'DESC']],
+            order: [['activityCount', 'DESC']],
             limit: 10
         });
-
-        console.log('trendingItems:', trendingItems);
 
         const itemIds = trendingItems.map(item => item.affectedResource);
 
@@ -84,8 +98,10 @@ exports.getTrending = async (req, res) => {
             }],
         });
 
-        res.json(libraryItems);
+        const signedLibraryItems = await signCoverImageUrls(libraryItems);
+        res.json(signedLibraryItems);
     } catch (error) {
+        console.error('Error in getTrending:', error);
         res.status(500).json({ message: 'Error fetching trending items.', error: error.message });
     }
 };
@@ -93,15 +109,14 @@ exports.getTrending = async (req, res) => {
 // GET /api/home/continue-reading
 exports.getContinueReading = async (req, res) => {
     try {
-        const userId = req.user.id; // Assuming verifyToken middleware attaches user info
+        const userId = req.user.id;
 
-        // Get the last 10 read activities for the user
         const recentActivities = await ActivityLog.findAll({
             where: {
                 actorId: userId,
                 actionType: 'Read'
             },
-            order: [['timestamp', 'DESC']],
+            order: [['createdAt', 'DESC']],
             limit: 10
         });
 
@@ -109,10 +124,8 @@ exports.getContinueReading = async (req, res) => {
             return res.json([]);
         }
 
-        // Get unique item IDs from the activities, preserving order
         const uniqueItemIds = [...new Set(recentActivities.map(act => act.affectedResource))];
 
-        // Fetch the corresponding library items
         const libraryItems = await LibraryItem.findAll({
             where: {
                 itemId: {
@@ -125,7 +138,6 @@ exports.getContinueReading = async (req, res) => {
             }],
         });
 
-        // Fetch the progress for these items
         const progressRecords = await ReadingProgress.findAll({
             where: {
                 userId,
@@ -135,23 +147,25 @@ exports.getContinueReading = async (req, res) => {
             }
         });
 
-        // Map the library items back to the order of uniqueItemIds and add the real progress
+        const signedLibraryItems = await signCoverImageUrls(libraryItems);
+
         const orderedItems = uniqueItemIds
             .map(id => {
-                const item = libraryItems.find(item => item.itemId === id);
+                const item = signedLibraryItems.find(item => item.itemId === id);
                 if (!item) return null;
                 const progress = progressRecords.find(p => p.itemId === id);
                 return {
-                    ...item.toJSON(),
+                    ...item,
                     progress: progress ? progress.progress : 0
                 };
             })
-            .filter(Boolean) // Remove any nulls if an item wasn't found
-            .slice(0, 5); // Limit to the top 5
+            .filter(Boolean)
+            .slice(0, 5);
 
         res.json(orderedItems);
 
     } catch (error) {
+        console.error('Error in getContinueReading:', error);
         res.status(500).json({ message: 'Error fetching continue reading items.', error: error.message });
     }
 };

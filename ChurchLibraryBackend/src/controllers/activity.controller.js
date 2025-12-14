@@ -16,23 +16,91 @@ const formatDate = (date) => {
 exports.logActivity = async (req, res) => {
   try {
     const { actionType, affectedResource } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.id; // This should be the UUID from the User model
     const ipAddress = req.ip || req.connection.remoteAddress;
 
-    if (!actionType || !affectedResource) {
-      return res.status(400).json({ message: 'actionType and affectedResource are required.' });
-    }
-
-    await ActivityLog.create({
-      actorId: userId,
+    console.log('Activity Log Request:', {
       actionType,
       affectedResource,
-      ipAddress,
+      userId,
+      userIdType: typeof userId,
+      ipAddress
     });
 
-    res.status(201).json({ message: 'Activity logged successfully.' });
+    // Validate required fields
+    if (!actionType) {
+      return res.status(400).json({ message: 'actionType is required.' });
+    }
+
+    // Validate that userId exists and is valid
+    if (!userId) {
+      console.error('No user ID provided in request');
+      return res.status(400).json({ message: 'User authentication required.' });
+    }
+
+    // Create activity log with optional affectedResource
+    const activityData = {
+      actorId: userId,
+      actionType: actionType,
+      affectedResource: affectedResource || null, // Allow null
+      ipAddress: ipAddress || null,
+    };
+
+    console.log('Creating activity log with data:', activityData);
+
+    const log = await ActivityLog.create(activityData);
+
+    console.log('Activity logged successfully:', log.logId);
+
+    res.status(201).json({ 
+      message: 'Activity logged successfully.',
+      logId: log.logId
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error logging activity.', error: error.message });
+    console.error('Error logging activity:', error);
+    
+    // Provide detailed error information in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Full error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        sql: error.sql,
+        original: error.original
+      });
+    }
+    
+    // Handle Sequelize validation errors
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: error.errors.map(e => ({
+          field: e.path,
+          message: e.message
+        }))
+      });
+    }
+    
+    // Handle foreign key constraint errors
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({ 
+        message: 'Invalid user reference. User may not exist.',
+        error: 'Foreign key constraint failed'
+      });
+    }
+    
+    // Handle unique constraint errors
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ 
+        message: 'Duplicate entry',
+        error: 'Unique constraint failed'
+      });
+    }
+
+    res.status(500).json({ 
+      message: 'Error logging activity.', 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 
@@ -98,6 +166,7 @@ exports.getActivityLogs = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching activity logs:', error);
     res.status(500).json({ message: 'Error fetching activity logs.', error: error.message });
   }
 };
@@ -175,6 +244,7 @@ exports.exportActivityLogs = async (req, res) => {
       res.json(jsonData);
     }
   } catch (error) {
+    console.error('Error exporting activity logs:', error);
     res.status(500).json({ message: 'Error exporting activity logs.', error: error.message });
   }
 };
@@ -206,6 +276,7 @@ exports.archiveActivityLogs = async (req, res) => {
       archivedCount: updatedCount
     });
   } catch (error) {
+    console.error('Error archiving activity logs:', error);
     res.status(500).json({ message: 'Error archiving activity logs.', error: error.message });
   }
 };

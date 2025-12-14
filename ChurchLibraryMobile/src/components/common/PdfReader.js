@@ -166,7 +166,13 @@ const html = `
       return promise.then(() => {
         loading.style.display = 'none';
         log("All pages rendered");
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ready" }));
+        // Give a small delay to ensure everything is settled
+        setTimeout(() => {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ready" }));
+        }, 100);
+      }).catch(error => {
+        log("Error rendering pages: " + error.message);
+        loading.textContent = "Error rendering pages";
       });
     }
 
@@ -250,10 +256,17 @@ const html = `
           loadingTask.promise.then(pdf => {
             log("PDF loaded successfully. Pages: " + pdf.numPages);
             pdfDoc = pdf;
-            renderAllPages();
+            return renderAllPages();
+          }).then(() => {
+            log("Rendering complete");
           }).catch(error => {
             log("Error loading PDF: " + error.message);
-            loading.textContent = "Error loading PDF";
+            loading.textContent = "Error loading PDF: " + error.message;
+            // Send error as ready so loading overlay is removed
+            window.ReactNativeWebView.postMessage(JSON.stringify({ 
+              type: "ready",
+              error: error.message 
+            }));
           });
           
         } else if (messageData.type === 'setScale') {
@@ -288,6 +301,7 @@ const PdfReader = React.forwardRef(({
 }, ref) => {
   const webViewRef = useRef(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const readyTimeoutRef = useRef(null);
 
   React.useImperativeHandle(ref, () => ({
     goToPage: (pageNumber) => {
@@ -305,8 +319,22 @@ const PdfReader = React.forwardRef(({
   useEffect(() => {
     if (webViewRef.current && pdfData && isWebViewReady) {
       webViewRef.current.postMessage(JSON.stringify({ pdfData }));
+      
+      // Fallback: If ready event doesn't fire within 10 seconds, assume it's ready
+      readyTimeoutRef.current = setTimeout(() => {
+        console.log('[PdfReader] Timeout - forcing ready state');
+        onReady && onReady();
+      }, 10000);
     }
   }, [pdfData, isWebViewReady]);
+
+  useEffect(() => {
+    return () => {
+      if (readyTimeoutRef.current) {
+        clearTimeout(readyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (webViewRef.current && isWebViewReady && scale) {
@@ -317,9 +345,10 @@ const PdfReader = React.forwardRef(({
   const handleMessage = (event) => {
     try {
       const message = JSON.parse(event.nativeEvent.data);
+      console.log('[PdfReader] Received message:', message.type); // Debug log
       switch (message.type) {
         case 'log':
-          // console.log(`[PDF WebView Log] ${message.data}`);
+          console.log(`[PDF WebView Log] ${message.data}`);
           break;
         case 'selection':
           onSelection && onSelection(message.data);
@@ -328,6 +357,12 @@ const PdfReader = React.forwardRef(({
           onTap && onTap();
           break;
         case 'ready':
+          console.log('[PdfReader] PDF is ready'); // Debug log
+          // Clear the timeout since we got the ready message
+          if (readyTimeoutRef.current) {
+            clearTimeout(readyTimeoutRef.current);
+            readyTimeoutRef.current = null;
+          }
           onReady && onReady();
           break;
         case 'locationChange':

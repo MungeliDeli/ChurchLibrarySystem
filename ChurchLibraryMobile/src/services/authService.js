@@ -6,32 +6,45 @@ async function register({ name, email, password }) {
     const response = await api.post('/auth/register', { name, email, password });
     return { ok: true, data: response.data };
   } catch (e) {
-    return { ok: false, message: e.message || 'Registration failed' };
+    return { ok: false, message: e.response?.data?.message || e.message || 'Registration failed' };
   }
 }
 
 async function login({ email, password }) {
   try {
+    console.log('Attempting login for:', email);
     const response = await api.post('/auth/login', { email, password });
+    console.log('Login response received:', response.data);
+    
     const { token, user } = response.data;
 
     if (token) {
-      // Defensive check: ensure token is a string before saving.
-      const tokenToSave = typeof token === 'string' ? token : JSON.stringify(token);
-      console.log('Attempting to save token:', tokenToSave);
-
-      await storage.setUserToken(tokenToSave);
-      await storage.setJson('user', user);
-      return { ok: true, data: { user } };
+      // Ensure token is a string
+      const tokenToSave = typeof token === 'string' ? token : String(token);
+      console.log('Saving token to secure storage');
+      
+      const tokenSaved = await storage.setUserToken(tokenToSave);
+      const userSaved = await storage.setJson('user', user);
+      
+      console.log('Token saved:', tokenSaved);
+      console.log('User saved:', userSaved);
+      
+      // Verify token was saved
+      const savedToken = await storage.getUserToken();
+      console.log('Verified saved token exists:', !!savedToken);
+      
+      return { ok: true, data: { user, token: tokenToSave } };
     }
 
     return { ok: false, message: 'Login failed: No token received' };
   } catch (e) {
+    console.error('Login error:', e.response?.data || e.message);
     return { ok: false, message: e.response?.data?.message || e.message || 'Login failed' };
   }
 }
 
 async function logout() {
+    console.log('Logging out - clearing token and user data');
     await storage.removeUserToken();
     await storage.removeItem('user');
 }
@@ -51,4 +64,19 @@ async function googleSignIn() {
   }
 }
 
-export { register, login, logout, getUser, googleSignIn };
+// New function to check if user is authenticated
+async function isAuthenticated() {
+  const token = await storage.getUserToken();
+  const user = await storage.getJson('user');
+  return !!(token && user);
+}
+
+// New function to refresh auth state
+async function refreshAuthState() {
+  const token = await storage.getUserToken();
+  const user = await storage.getJson('user');
+  console.log('Auth state - Token exists:', !!token, 'User exists:', !!user);
+  return { token, user };
+}
+
+export { register, login, logout, getUser, googleSignIn, isAuthenticated, refreshAuthState };

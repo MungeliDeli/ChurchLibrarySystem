@@ -20,7 +20,7 @@ function debounce(func, wait) {
   };
 }
 
-const ReaderControls = ({ 
+const ReaderControls = React.memo(({ 
   onToggleFullScreen, 
   onIncreaseFontSize, 
   onDecreaseFontSize, 
@@ -48,7 +48,7 @@ const ReaderControls = ({
       </TouchableOpacity>
     </View>
   );
-};
+});
 
 function BookReaderScreen({ route, navigation }) {
   const { theme } = useTheme();
@@ -69,6 +69,27 @@ function BookReaderScreen({ route, navigation }) {
   const [pdfScale, setPdfScale] = useState(1.5);
   
   const readerRef = useRef(null);
+  const annotationsRef = useRef(annotations);
+  const isFullScreenRef = useRef(isFullScreen);
+  const currentSelectionRef = useRef(currentSelection);
+  const clickedAnnotationCfiRef = useRef(clickedAnnotationCfi);
+
+  // Keep refs in sync
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
+
+  useEffect(() => {
+    isFullScreenRef.current = isFullScreen;
+  }, [isFullScreen]);
+
+  useEffect(() => {
+    currentSelectionRef.current = currentSelection;
+  }, [currentSelection]);
+
+  useEffect(() => {
+    clickedAnnotationCfiRef.current = clickedAnnotationCfi;
+  }, [clickedAnnotationCfi]);
 
   // Detect file format from route params or downloadUrl
   const fileFormat = format || (downloadUrl?.includes('.pdf') ? 'pdf' : 'epub');
@@ -111,11 +132,13 @@ function BookReaderScreen({ route, navigation }) {
   }, [itemId]);
 
   // --- Progress Saving ---
-  const saveProgress = useCallback(debounce(async (p) => {
-    if (itemId && p > 0) {
-      await saveReadingProgress(itemId, p);
-    }
-  }, 10000), [itemId]);
+  const saveProgressDebounced = useRef(
+    debounce(async (p, id) => {
+      if (id && p > 0) {
+        await saveReadingProgress(id, p);
+      }
+    }, 10000)
+  ).current;
 
   // Save final progress on unmount
   useEffect(() => {
@@ -166,7 +189,8 @@ function BookReaderScreen({ route, navigation }) {
     }
   };
 
-  const handleSelection = (selection) => {
+  // Create stable callbacks that don't change on every render
+  const handleSelection = useCallback((selection) => {
     if (selection && selection.text.trim().length > 0) {
       setClickedAnnotationCfi(null);
       setCurrentSelection(selection);
@@ -174,10 +198,10 @@ function BookReaderScreen({ route, navigation }) {
     } else {
       setCurrentSelection(null);
     }
-  };
+  }, []); // Empty deps - function never changes
 
-  const handleHighlightClick = ({ cfiRange }) => {
-    const clickedAnnotation = annotations.find(a => a.textLocation === cfiRange);
+  const handleHighlightClick = useCallback(({ cfiRange }) => {
+    const clickedAnnotation = annotationsRef.current.find(a => a.textLocation === cfiRange);
     if (clickedAnnotation) {
       setCurrentSelection(null);
       setClickedAnnotationCfi(cfiRange);
@@ -185,18 +209,34 @@ function BookReaderScreen({ route, navigation }) {
     } else {
       setClickedAnnotationCfi(null);
       setCurrentSelection(null);
-      if (isFullScreen) {
+      if (isFullScreenRef.current) {
         setShowControls(prev => !prev);
       }
     }
-  };
+  }, []); // Empty deps - uses refs
 
-  const handleLocationChange = (location) => {
+  const handleLocationChange = useCallback((location) => {
     if (location && location.end && typeof location.end.percentage === 'number') {
       setProgress(location.end.percentage);
-      saveProgress(location.end.percentage);
+      saveProgressDebounced(location.end.percentage, itemId);
     }
-  };
+  }, [itemId, saveProgressDebounced]);
+
+  const handleTap = useCallback(() => {
+    if (currentSelectionRef.current || clickedAnnotationCfiRef.current) {
+      setCurrentSelection(null);
+      setClickedAnnotationCfi(null);
+      setShowControls(true);
+      return;
+    }
+    if (isFullScreenRef.current) {
+      setShowControls(prev => !prev);
+    }
+  }, []); // Empty deps - uses refs
+
+  const handleReaderReady = useCallback(() => {
+    setIsReaderReady(true);
+  }, []);
 
   const handleSaveAnnotation = async (note = '', isNote = false) => {
     if (currentSelection && fileFormat === 'epub') {
@@ -225,7 +265,6 @@ function BookReaderScreen({ route, navigation }) {
         ToastAndroid.show("Failed to save annotation", ToastAndroid.SHORT);
       }
     } else if (fileFormat === 'pdf') {
-      // For PDF, just save the note without CFI range
       ToastAndroid.show('PDF annotations coming soon', ToastAndroid.SHORT);
     }
   };
@@ -250,7 +289,7 @@ function BookReaderScreen({ route, navigation }) {
     }
   };
 
-  const handleIncreaseFontSize = () => {
+  const handleIncreaseFontSize = useCallback(() => {
     if (fileFormat === 'epub') {
       setEpubFontSize(prev => {
         const newSize = Math.min(prev + 10, 200);
@@ -267,9 +306,9 @@ function BookReaderScreen({ route, navigation }) {
         return newScale;
       });
     }
-  };
+  }, [fileFormat]);
 
-  const handleDecreaseFontSize = () => {
+  const handleDecreaseFontSize = useCallback(() => {
     if (fileFormat === 'epub') {
       setEpubFontSize(prev => {
         const newSize = Math.max(prev - 10, 50);
@@ -286,7 +325,7 @@ function BookReaderScreen({ route, navigation }) {
         return newScale;
       });
     }
-  };
+  }, [fileFormat]);
 
   if (isLoading) {
     return (
@@ -352,43 +391,26 @@ function BookReaderScreen({ route, navigation }) {
       <View style={styles.readerContainer}>
         {fileFormat === 'epub' ? (
           <EpubReader
+            key="epub-reader"
             ref={readerRef}
             bookData={bookData}
             initialLocation={initialLocation}
             onSelection={handleSelection}
             onLocationChange={handleLocationChange}
-            onReady={() => setIsReaderReady(true)}
-            onTap={() => {
-              if (currentSelection || clickedAnnotationCfi) {
-                setCurrentSelection(null);
-                setClickedAnnotationCfi(null);
-                setShowControls(true);
-                return;
-              }
-              if (isFullScreen) {
-                setShowControls(prev => !prev);
-              }
-            }}
+            onReady={handleReaderReady}
+            onTap={handleTap}
             onHighlightClick={handleHighlightClick}
             fontSize={epubFontSize}
           />
         ) : (
           <PdfReader
+            key="pdf-reader"
             ref={readerRef}
             pdfData={bookData}
             onSelection={handleSelection}
             onLocationChange={handleLocationChange}
-            onReady={() => setIsReaderReady(true)}
-            onTap={() => {
-              if (currentSelection) {
-                setCurrentSelection(null);
-                setShowControls(true);
-                return;
-              }
-              if (isFullScreen) {
-                setShowControls(prev => !prev);
-              }
-            }}
+            onReady={handleReaderReady}
+            onTap={handleTap}
             scale={pdfScale}
           />
         )}

@@ -41,6 +41,7 @@ const html = `
     const viewer = document.getElementById("viewer");
     let rendition;
     let book;
+    let currentFontSize = 100; // Track current font size to avoid unnecessary updates
 
     const log = (message) => {
       window.ReactNativeWebView.postMessage(JSON.stringify({ type: "log", data: message }));
@@ -97,6 +98,12 @@ const html = `
           }
           log("rendition.display() called.");
           
+          // Set initial font size if provided
+          if (messageData.fontSize && messageData.fontSize !== 100) {
+            currentFontSize = messageData.fontSize;
+            rendition.themes.fontSize(currentFontSize + '%');
+          }
+          
           rendition.on('relocated', (location) => {
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: "locationChange", data: location }));
           });
@@ -132,10 +139,13 @@ const html = `
           log("Received goTo message with cfi: " + messageData.cfi);
           rendition.display(messageData.cfi);
         } else if (messageData.type === 'setFontSize') {
-          log("Received setFontSize message with size: " + messageData.size);
-          // Convert percentage to proper format (e.g., "16px" or just the percentage)
-          const fontSize = messageData.size;
-          rendition.themes.fontSize(fontSize + '%');
+          const newSize = messageData.size;
+          // Only update if the size actually changed
+          if (newSize !== currentFontSize) {
+            log("Changing font size from " + currentFontSize + " to " + newSize);
+            currentFontSize = newSize;
+            rendition.themes.fontSize(newSize + '%');
+          }
         }
       } catch (e) {
         log("ERROR: " + e.message + " | stack: " + e.stack);
@@ -158,6 +168,7 @@ const EpubReader = React.forwardRef(({
 }, ref) => {
   const webViewRef = useRef(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const previousFontSizeRef = useRef(fontSize); // Track previous font size
 
   React.useImperativeHandle(ref, () => ({
     highlight: (cfiRange, color = '#FFFF00') => {
@@ -180,15 +191,18 @@ const EpubReader = React.forwardRef(({
 
   useEffect(() => {
     if (webViewRef.current && bookData && isWebViewReady) {
-      const message = { bookData, initialLocation };
+      const message = { bookData, initialLocation, fontSize };
       webViewRef.current.postMessage(JSON.stringify(message));
+      previousFontSizeRef.current = fontSize; // Initialize the ref
     }
   }, [bookData, isWebViewReady, initialLocation]);
 
   useEffect(() => {
-    if (webViewRef.current && isWebViewReady && fontSize) {
-      // Send just the number, the WebView will add the '%'
+    // Only send font size update if it actually changed
+    if (webViewRef.current && isWebViewReady && fontSize !== undefined && fontSize !== previousFontSizeRef.current) {
+      console.log('Font size changed from', previousFontSizeRef.current, 'to', fontSize);
       webViewRef.current.postMessage(JSON.stringify({ type: 'setFontSize', size: fontSize }));
+      previousFontSizeRef.current = fontSize;
     }
   }, [fontSize, isWebViewReady]);
 

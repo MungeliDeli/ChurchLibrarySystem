@@ -89,6 +89,7 @@ const html = `
     let scale = 1.5; // Default scale
     let currentPage = 1;
     let highlightedRanges = [];
+    let isRendering = false; // Prevent multiple simultaneous renders
     
     const container = document.getElementById('container');
     const loading = document.getElementById('loading');
@@ -155,6 +156,12 @@ const html = `
     }
 
     function renderAllPages() {
+      if (isRendering) {
+        log("Already rendering, skipping...");
+        return Promise.resolve();
+      }
+      
+      isRendering = true;
       container.innerHTML = '';
       const numPages = pdfDoc.numPages;
       
@@ -165,18 +172,25 @@ const html = `
       
       return promise.then(() => {
         loading.style.display = 'none';
+        isRendering = false;
         log("All pages rendered");
         // Give a small delay to ensure everything is settled
         setTimeout(() => {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ready" }));
         }, 100);
       }).catch(error => {
+        isRendering = false;
         log("Error rendering pages: " + error.message);
         loading.textContent = "Error rendering pages";
       });
     }
 
     function setScale(newScale) {
+      if (newScale === scale) {
+        log("Scale unchanged, skipping re-render");
+        return;
+      }
+      log("Changing scale from " + scale + " to " + newScale);
       scale = newScale;
       renderAllPages();
     }
@@ -252,6 +266,11 @@ const html = `
             pdfArray[i] = pdfData.charCodeAt(i);
           }
           
+          // Set initial scale if provided
+          if (messageData.scale) {
+            scale = messageData.scale;
+          }
+          
           const loadingTask = pdfjsLib.getDocument({ data: pdfArray });
           loadingTask.promise.then(pdf => {
             log("PDF loaded successfully. Pages: " + pdf.numPages);
@@ -270,7 +289,7 @@ const html = `
           });
           
         } else if (messageData.type === 'setScale') {
-          log("Setting scale to: " + messageData.scale);
+          log("Received setScale message with scale: " + messageData.scale);
           setScale(messageData.scale);
           
         } else if (messageData.type === 'goToPage') {
@@ -302,6 +321,7 @@ const PdfReader = React.forwardRef(({
   const webViewRef = useRef(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   const readyTimeoutRef = useRef(null);
+  const previousScaleRef = useRef(scale); // Track previous scale
 
   React.useImperativeHandle(ref, () => ({
     goToPage: (pageNumber) => {
@@ -310,15 +330,19 @@ const PdfReader = React.forwardRef(({
       }
     },
     setScale: (newScale) => {
-      if (webViewRef.current) {
+      if (webViewRef.current && newScale !== previousScaleRef.current) {
+        console.log('Setting scale from', previousScaleRef.current, 'to', newScale);
         webViewRef.current.postMessage(JSON.stringify({ type: 'setScale', scale: newScale }));
+        previousScaleRef.current = newScale;
       }
     }
   }));
 
   useEffect(() => {
     if (webViewRef.current && pdfData && isWebViewReady) {
-      webViewRef.current.postMessage(JSON.stringify({ pdfData }));
+      const message = { pdfData, scale };
+      webViewRef.current.postMessage(JSON.stringify(message));
+      previousScaleRef.current = scale; // Initialize the ref
       
       // Fallback: If ready event doesn't fire within 10 seconds, assume it's ready
       readyTimeoutRef.current = setTimeout(() => {
@@ -336,11 +360,8 @@ const PdfReader = React.forwardRef(({
     };
   }, []);
 
-  useEffect(() => {
-    if (webViewRef.current && isWebViewReady && scale) {
-      webViewRef.current.postMessage(JSON.stringify({ type: 'setScale', scale }));
-    }
-  }, [scale, isWebViewReady]);
+  // Remove the problematic useEffect that sends scale on every render
+  // Scale changes are now handled through the imperative ref method only
 
   const handleMessage = (event) => {
     try {

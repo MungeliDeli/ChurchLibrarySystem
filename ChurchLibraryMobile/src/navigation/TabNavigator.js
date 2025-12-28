@@ -3,8 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/main/HomeScreen";
 import LibraryStack from "./LibraryStack";
 import BibleScreen from "../screens/main/BibleScreen";
-import LibraryScreen from "../screens/main/LibraryScreen";
-import ProfileScreen from "../screens/main/ProfileScreen";
+import ProfileStack from "./ProfileStack";
 import { useFocusEffect, useNavigation, getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { BackHandler, Platform, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -88,7 +87,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           tabBarLabel: "Profile",
           tabBarIcon: ({ color, size }) => (

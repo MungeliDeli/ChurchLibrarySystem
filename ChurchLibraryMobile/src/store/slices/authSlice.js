@@ -60,6 +60,7 @@ const authSlice = createSlice({
   },
 });
 
+
 export const { setGuest, setAuthenticated, setUnauthenticated, logout } =
   authSlice.actions;
 export const selectAuth = (state) => state.auth;

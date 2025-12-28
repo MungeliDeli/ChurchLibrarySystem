@@ -11,7 +11,7 @@ function LibraryStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="LibraryList" component={LibraryScreen} />
       <Stack.Screen name="BookDetails" component={BookDetailsScreen} />
-      <Stack.Screen name="BookReader" component={BookReaderScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="BookReader" component={BookReaderScreen} />
     </Stack.Navigator>
   );
 }

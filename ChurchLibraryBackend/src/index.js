@@ -30,6 +30,9 @@ app.use('/api/progress', progressRoutes);
 const userRoutes = require('./routes/user.routes');
 app.use('/api/users', userRoutes);
 
+const annotationRoutes = require('./routes/annotation.routes');
+app.use('/api/annotations', annotationRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

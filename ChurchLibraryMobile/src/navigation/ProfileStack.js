@@ -5,6 +5,11 @@ import MyStatisticsScreen from "../screens/drawer/MyStatisticsScreen";
 import NotesHighlightsScreen from "../screens/drawer/NotesHighlightsScreen";
 import ReadingScheduleScreen from "../screens/drawer/ReadingScheduleScreen";
 import DownloadsScreen from "../screens/drawer/DownloadsScreen";
+import SettingsScreen from "../screens/drawer/SettingsScreen";
+import HelpSupportScreen from "../screens/drawer/HelpSupportScreen";
+import AboutScreen from "../screens/drawer/AboutScreen";
+
+import EditNoteScreen from "../screens/drawer/EditNoteScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +40,26 @@ export default function ProfileStack() {
         name="Downloads"
         component={DownloadsScreen}
         options={{ title: "Downloads" }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: "Settings" }}
+      />
+      <Stack.Screen
+        name="HelpSupport"
+        component={HelpSupportScreen}
+        options={{ title: "Help & Support" }}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ title: "About" }}
+      />
+      <Stack.Screen
+        name="EditNote"
+        component={EditNoteScreen}
+        options={{ title: "Edit Note" }}
       />
     </Stack.Navigator>
   );

@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, ToastAndroid, FlatList } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, ToastAndroid, SafeAreaView } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import EpubReader from '../../components/common/EpubReader';
+import PdfReader from '../../components/common/PdfReader';
+import NoteModal from '../../components/common/NoteModal';
 import useTheme from '../../hooks/useTheme';
-import { addToReadingList, addToDownloads } from '../../services/libraryService';
-import { createAnnotation, getAnnotationsByItem, deleteAnnotation } from '../../services/libraryService';
+import useFullScreen from '../../hooks/useFullScreen';
+import { createAnnotation, getAnnotationsByItem, deleteAnnotation } from '../../services/annotationService';
 import { logActivity } from '../../services/activityService';
 import { saveReadingProgress } from '../../services/progressService';
 
@@ -17,31 +20,128 @@ function debounce(func, wait) {
   };
 }
 
+const ReaderControls = React.memo(({ 
+  onToggleFullScreen, 
+  onIncreaseFontSize, 
+  onDecreaseFontSize, 
+  isFullScreen, 
+  currentFontSize,
+  format 
+}) => {
+  const { theme } = useTheme();
+
+  return (
+    <View style={[styles.controlsContainer, { backgroundColor: theme.colors.background.primary }]}>
+      <View style={styles.fontSizeGroup}>
+        <TouchableOpacity onPress={onDecreaseFontSize} style={styles.controlButton}>
+          <MaterialIcons name="text-decrease" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.fontSizeText, { color: theme.colors.text.primary }]}>
+          {format === 'pdf' ? `${Math.round(currentFontSize * 100)}%` : `${currentFontSize}%`}
+        </Text>
+        <TouchableOpacity onPress={onIncreaseFontSize} style={styles.controlButton}>
+          <MaterialIcons name="text-increase" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={onToggleFullScreen} style={styles.controlButton}>
+        <MaterialIcons name={isFullScreen ? "fullscreen-exit" : "fullscreen"} size={30} color={theme.colors.text.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 function BookReaderScreen({ route, navigation }) {
   const { theme } = useTheme();
-  const { downloadUrl, itemId } = route.params;
-  const [zoom, setZoom] = useState(100);
-  const [selectedText, setSelectedText] = useState('');
+  const { downloadUrl, itemId, initialLocation, format } = route.params;
+  const { isFullScreen, toggleFullScreen } = useFullScreen();
+  const [currentSelection, setCurrentSelection] = useState(null);
+  const [clickedAnnotationCfi, setClickedAnnotationCfi] = useState(null);
   const [annotations, setAnnotations] = useState([]);
-  const [showControls, setShowControls] = useState(false);
   const [progress, setProgress] = useState(0);
-  const webViewRef = useRef(null);
+  const [isReaderReady, setIsReaderReady] = useState(false);
+  const [bookData, setBookData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNoteModalVisible, setNoteModalVisible] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  
+  // Format-specific state
+  const [epubFontSize, setEpubFontSize] = useState(100);
+  const [pdfScale, setPdfScale] = useState(1.5);
+  
+  const readerRef = useRef(null);
+  const annotationsRef = useRef(annotations);
+  const isFullScreenRef = useRef(isFullScreen);
+  const currentSelectionRef = useRef(currentSelection);
+  const clickedAnnotationCfiRef = useRef(clickedAnnotationCfi);
 
-  // --- Progress Saving ---
-  const saveProgress = useCallback(debounce(async (p) => {
-    if (itemId && p > 0) {
-      await saveReadingProgress(itemId, p);
-    }
-  }, 10000), [itemId]); // Debounce saving to every 10 seconds
+  // Keep refs in sync
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
 
   useEffect(() => {
-    // Log read activity when the screen is opened
-    if (itemId) {
-      logActivity('Read', itemId);
+    isFullScreenRef.current = isFullScreen;
+  }, [isFullScreen]);
+
+  useEffect(() => {
+    currentSelectionRef.current = currentSelection;
+  }, [currentSelection]);
+
+  useEffect(() => {
+    clickedAnnotationCfiRef.current = clickedAnnotationCfi;
+  }, [clickedAnnotationCfi]);
+
+  // Detect file format from route params or downloadUrl
+  const fileFormat = format || (downloadUrl?.includes('.pdf') ? 'pdf' : 'epub');
+
+  useEffect(() => {
+    if (downloadUrl) {
+      setIsLoading(true);
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', downloadUrl, true);
+      xhr.responseType = 'blob';
+
+      xhr.onload = function(e) {
+        if (this.status == 200) {
+          const blob = this.response;
+          const reader = new FileReader();
+          reader.onload = function() {
+            const base64String = reader.result.split(',')[1];
+            setBookData(base64String);
+            setIsLoading(false);
+          };
+          reader.readAsDataURL(blob);
+        } else {
+          setIsLoading(false);
+          ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+        }
+      };
+      xhr.onerror = function() {
+        setIsLoading(false);
+        ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+      };
+      xhr.send();
     }
-    
-    // Save progress when the user leaves the screen
+  }, [downloadUrl]);
+
+  // --- Log Reading Activity ---
+  useEffect(() => {
+    if (itemId) {
+      logActivity('Read', itemId).catch(err => console.error("Failed to log activity:", err));
+    }
+  }, [itemId]);
+
+  // --- Progress Saving ---
+  const saveProgressDebounced = useRef(
+    debounce(async (p, id) => {
+      if (id && p > 0) {
+        await saveReadingProgress(id, p);
+      }
+    }, 10000)
+  ).current;
+
+  // Save final progress on unmount
+  useEffect(() => {
     return () => {
       if (itemId && progress > 0) {
         saveReadingProgress(itemId, progress);
@@ -49,192 +149,285 @@ function BookReaderScreen({ route, navigation }) {
     };
   }, [itemId, progress]);
 
-
-  // --- Annotations ---
+  // --- Annotations (EPUB only for now) ---
   useEffect(() => {
-    fetchAnnotations();
-  }, [itemId]);
+    if (itemId && fileFormat === 'epub') fetchAnnotations();
+  }, [itemId, fileFormat]);
+
+  useEffect(() => {
+    if (isReaderReady && annotations.length > 0 && fileFormat === 'epub') {
+      annotations.forEach(annotation => {
+        if (annotation.textLocation && readerRef.current) {
+          readerRef.current.highlight(annotation.textLocation, annotation.highlightColor);
+        }
+      });
+    }
+  }, [isReaderReady, annotations, fileFormat]);
+
+  useEffect(() => {
+    if (isReaderReady && initialLocation && readerRef.current && fileFormat === 'epub') {
+      readerRef.current.goTo(initialLocation);
+    }
+  }, [isReaderReady, initialLocation, fileFormat]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: !isFullScreen,
+      tabBarVisible: !isFullScreen,
+    });
+    if (!isFullScreen) {
+      setShowControls(true);
+    }
+  }, [isFullScreen, navigation]);
 
   const fetchAnnotations = async () => {
-    const result = await getAnnotationsByItem(itemId);
-    if (result.ok) {
-      setAnnotations(result.data);
-      // Highlighting logic can be improved
-    }
-  };
-
-
-  // --- WebView Communication ---
-  const injectedJavaScript = `
-    window.addEventListener('scroll', function() {
-      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      var scrollHeight = document.documentElement.scrollHeight;
-      var clientHeight = document.documentElement.clientHeight;
-      var progress = scrollTop / (scrollHeight - clientHeight);
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'scroll', progress: progress }));
-    });
-
-    let startY;
-    document.addEventListener('touchstart', function (e) {
-      startY = e.touches[0].pageY;
-    });
-    document.addEventListener('touchend', function (e) {
-      let endY = e.changedTouches[0].pageY;
-      if (Math.abs(startY - endY) < 10) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'click' }));
-      }
-    });
-
-    window.addEventListener('selectionchange', function() {
-      var selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'selection', data: selection.toString() }));
-      }
-    });
-  `;
-
-  const handleMessage = (event) => {
     try {
-      const message = JSON.parse(event.nativeEvent.data);
-      if (message.type === 'click') {
+      const data = await getAnnotationsByItem(itemId);
+      setAnnotations(data);
+    } catch (error) {
+      console.error("Failed to fetch annotations", error);
+    }
+  };
+
+  // Create stable callbacks that don't change on every render
+  const handleSelection = useCallback((selection) => {
+    if (selection && selection.text.trim().length > 0) {
+      setClickedAnnotationCfi(null);
+      setCurrentSelection(selection);
+      setShowControls(false);
+    } else {
+      setCurrentSelection(null);
+    }
+  }, []); // Empty deps - function never changes
+
+  const handleHighlightClick = useCallback(({ cfiRange }) => {
+    const clickedAnnotation = annotationsRef.current.find(a => a.textLocation === cfiRange);
+    if (clickedAnnotation) {
+      setCurrentSelection(null);
+      setClickedAnnotationCfi(cfiRange);
+      setShowControls(false);
+    } else {
+      setClickedAnnotationCfi(null);
+      setCurrentSelection(null);
+      if (isFullScreenRef.current) {
         setShowControls(prev => !prev);
-      } else if (message.type === 'selection') {
-        setSelectedText(message.data);
-      } else if (message.type === 'scroll') {
-        setProgress(message.progress);
-        saveProgress(message.progress);
-      }
-    } catch (e) {
-      // Not a JSON message, likely the old selection format
-      setSelectedText(event.nativeEvent.data);
-    }
-  };
-  
-  // --- UI Handlers ---
-  // ... (handleHighlight, handleDeleteAnnotation, etc. remain the same)
-    const handleHighlight = async () => {
-    if (selectedText) {
-      const result = await createAnnotation(itemId, selectedText, '#FFFF00', '');
-      if (result.ok) {
-        ToastAndroid.show('Highlight added', ToastAndroid.SHORT);
-        setSelectedText('');
-        fetchAnnotations();
-      } else {
-        ToastAndroid.show(result.message, ToastAndroid.SHORT);
       }
     }
-  };
+  }, []); // Empty deps - uses refs
 
-  const handleDeleteAnnotation = async (annotationId) => {
-    const result = await deleteAnnotation(annotationId);
-    if (result.ok) {
-      ToastAndroid.show('Annotation deleted', ToastAndroid.SHORT);
-      fetchAnnotations();
-    } else {
-      ToastAndroid.show(result.message, ToastAndroid.SHORT);
+  const handleLocationChange = useCallback((location) => {
+    if (location && location.end && typeof location.end.percentage === 'number') {
+      setProgress(location.end.percentage);
+      saveProgressDebounced(location.end.percentage, itemId);
+    }
+  }, [itemId, saveProgressDebounced]);
+
+  const handleTap = useCallback(() => {
+    if (currentSelectionRef.current || clickedAnnotationCfiRef.current) {
+      setCurrentSelection(null);
+      setClickedAnnotationCfi(null);
+      setShowControls(true);
+      return;
+    }
+    if (isFullScreenRef.current) {
+      setShowControls(prev => !prev);
+    }
+  }, []); // Empty deps - uses refs
+
+  const handleReaderReady = useCallback(() => {
+    setIsReaderReady(true);
+  }, []);
+
+  const handleSaveAnnotation = async (note = '', isNote = false) => {
+    if (currentSelection && fileFormat === 'epub') {
+      const { text, cfiRange } = currentSelection;
+      const isAlreadyHighlighted = annotations.some(a => a.textLocation === cfiRange);
+      if (isAlreadyHighlighted) {
+        ToastAndroid.show('Text is already highlighted.', ToastAndroid.SHORT);
+        return;
+      }
+
+      const noteToSave = note || text;
+      const highlightColor = '#FFFF00';
+
+      try {
+        const newAnnotation = await createAnnotation(itemId, cfiRange, highlightColor, noteToSave, isNote);
+        if (newAnnotation) {
+          ToastAndroid.show('Annotation saved', ToastAndroid.SHORT);
+          if (readerRef.current) {
+            readerRef.current.highlight(cfiRange, highlightColor);
+          }
+          setCurrentSelection(null);
+          setNoteModalVisible(false);
+          fetchAnnotations();
+        }
+      } catch (error) {
+        ToastAndroid.show("Failed to save annotation", ToastAndroid.SHORT);
+      }
+    } else if (fileFormat === 'pdf') {
+      ToastAndroid.show('PDF annotations coming soon', ToastAndroid.SHORT);
     }
   };
 
-  const handleAddToReadingList = async () => {
-    const result = await addToReadingList(itemId);
-    if (result.ok) {
-      ToastAndroid.show('Added to reading list', ToastAndroid.SHORT);
-    } else {
-      ToastAndroid.show(result.message, ToastAndroid.SHORT);
+  const handleRemoveHighlight = async () => {
+    if (clickedAnnotationCfi && fileFormat === 'epub') {
+      try {
+        const annotationToRemove = annotations.find(a => a.textLocation === clickedAnnotationCfi);
+        if (annotationToRemove) {
+          await deleteAnnotation(annotationToRemove.annotationId);
+          if (readerRef.current) {
+            readerRef.current.removeHighlight(clickedAnnotationCfi);
+          }
+          setClickedAnnotationCfi(null);
+          fetchAnnotations();
+          ToastAndroid.show('Highlight removed', ToastAndroid.SHORT);
+        }
+      } catch (error) {
+        ToastAndroid.show("Failed to remove highlight", ToastAndroid.SHORT);
+        console.error(error);
+      }
     }
   };
 
-  const handleDownload = async () => {
-    const result = await addToDownloads(itemId);
-    if (result.ok) {
-      ToastAndroid.show('Added to downloads', ToastAndroid.SHORT);
-    } else {
-      ToastAndroid.show(result.message, ToastAndroid.SHORT);
+  const handleIncreaseFontSize = useCallback(() => {
+    if (fileFormat === 'epub') {
+      setEpubFontSize(prev => {
+        const newSize = Math.min(prev + 10, 200);
+        ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        return newSize;
+      });
+    } else if (fileFormat === 'pdf') {
+      setPdfScale(prev => {
+        const newScale = Math.min(prev + 0.2, 3.0);
+        if (readerRef.current) {
+          readerRef.current.setScale(newScale);
+        }
+        ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        return newScale;
+      });
     }
-  };
+  }, [fileFormat]);
 
-  if (!downloadUrl) {
+  const handleDecreaseFontSize = useCallback(() => {
+    if (fileFormat === 'epub') {
+      setEpubFontSize(prev => {
+        const newSize = Math.max(prev - 10, 50);
+        ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        return newSize;
+      });
+    } else if (fileFormat === 'pdf') {
+      setPdfScale(prev => {
+        const newScale = Math.max(prev - 0.2, 0.5);
+        if (readerRef.current) {
+          readerRef.current.setScale(newScale);
+        }
+        ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        return newScale;
+      });
+    }
+  }, [fileFormat]);
+
+  if (isLoading) {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: theme.colors.background.primary }]}>
-        <Text style={{ color: theme.colors.text.primary }}>Error: Book URL not found.</Text>
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
+        <Text style={{ color: theme.colors.text.primary, marginTop: 10 }}>
+          Loading {fileFormat.toUpperCase()}...
+        </Text>
       </View>
     );
   }
 
-  const pdfViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(downloadUrl)}`;
+  const renderActionMenu = () => {
+    if (clickedAnnotationCfi && fileFormat === 'epub') {
+      return (
+        <View style={styles.actionMenu}>
+          <TouchableOpacity onPress={handleRemoveHighlight} style={styles.actionButton}>
+            <MaterialIcons name="delete" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (currentSelection) {
+      return (
+        <>
+          <View style={styles.actionMenu}>
+            {fileFormat === 'epub' && (
+              <>
+                <TouchableOpacity onPress={() => handleSaveAnnotation()} style={styles.actionButton}>
+                  <MaterialIcons name="border-color" size={24} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setNoteModalVisible(true)} style={styles.actionButton}>
+                  <MaterialIcons name="note-add" size={24} color="white" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+          <NoteModal
+            isVisible={isNoteModalVisible}
+            onClose={() => setNoteModalVisible(false)}
+            selectedText={currentSelection.text}
+            onSave={(noteText) => handleSaveAnnotation(noteText, true)}
+          />
+        </>
+      );
+    }
+    return null;
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      <WebView
-        ref={webViewRef}
-        source={{ uri: pdfViewerUrl }}
-        style={styles.webview}
-        startInLoadingState={true}
-        textZoom={zoom}
-        injectedJavaScript={injectedJavaScript}
-        onMessage={handleMessage}
-        androidLayerType="software"
-        renderLoading={() => (
-          <View style={[styles.center, styles.loadingOverlay]}>
-            <ActivityIndicator size="large" color={theme.colors.primary.main} />
-          </View>
-        )}
-        onError={(syntheticEvent) => {
-          const { nativeEvent } = syntheticEvent;
-          console.error('WebView error: ', nativeEvent);
-        }}
-      />
-      {selectedText ? (
-        <View style={styles.highlightMenu}>
-          <TouchableOpacity onPress={handleHighlight} style={styles.highlightButton}>
-            <Text style={styles.highlightButtonText}>Highlight</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      {showControls && (
-        <View style={styles.controls}>
-          <TouchableOpacity onPress={handleAddToReadingList} style={styles.button}>
-            <Text style={styles.buttonText}>➕</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleDownload} style={styles.button}>
-            <Text style={styles.buttonText}>⬇️</Text>
-          </TouchableOpacity>
-          <View style={styles.zoomControls}>
-            <TouchableOpacity onPress={() => setZoom(prev => prev + 10)} style={styles.zoomButton}>
-              <Text style={styles.zoomButtonText}>➕</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setZoom(prev => Math.max(50, prev - 10))} style={styles.zoomButton}>
-              <Text style={styles.zoomButtonText}>➖</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      {((!isFullScreen || (isFullScreen && showControls)) && !currentSelection && !clickedAnnotationCfi) && (
+        <ReaderControls
+          onToggleFullScreen={toggleFullScreen}
+          onIncreaseFontSize={handleIncreaseFontSize}
+          onDecreaseFontSize={handleDecreaseFontSize}
+          isFullScreen={isFullScreen}
+          currentFontSize={fileFormat === 'epub' ? epubFontSize : pdfScale}
+          format={fileFormat}
+        />
       )}
-      {showControls && (
-        <View style={styles.annotationsContainer}>
-          <Text style={styles.annotationsTitle}>Annotations</Text>
-          <FlatList
-            data={annotations}
-            keyExtractor={(item) => item.annotationId.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.annotationItem}>
-                <Text style={{color: 'white'}}>{item.textLocation}</Text>
-                <TouchableOpacity onPress={() => handleDeleteAnnotation(item.annotationId)}>
-                  <Text style={styles.deleteButton}>❌</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+      <View style={styles.readerContainer}>
+        {fileFormat === 'epub' ? (
+          <EpubReader
+            key="epub-reader"
+            ref={readerRef}
+            bookData={bookData}
+            initialLocation={initialLocation}
+            onSelection={handleSelection}
+            onLocationChange={handleLocationChange}
+            onReady={handleReaderReady}
+            onTap={handleTap}
+            onHighlightClick={handleHighlightClick}
+            fontSize={epubFontSize}
           />
+        ) : (
+          <PdfReader
+            key="pdf-reader"
+            ref={readerRef}
+            pdfData={bookData}
+            onSelection={handleSelection}
+            onLocationChange={handleLocationChange}
+            onReady={handleReaderReady}
+            onTap={handleTap}
+            scale={pdfScale}
+          />
+        )}
+      </View>
+      {!isReaderReady && (
+        <View style={[styles.center, styles.loadingOverlay]}>
+          <ActivityIndicator size="large" color={theme.colors.primary.main} />
+          <Text style={{ color: theme.colors.primary.main, marginTop: 10 }}>Rendering...</Text>
         </View>
       )}
-    </View>
+      {renderActionMenu()}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  webview: {
     flex: 1,
   },
   center: {
@@ -249,80 +442,48 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(255,255,255,0.8)',
   },
-  controls: {
+  actionMenu: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    left: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 10,
-    borderRadius: 25,
-  },
-  button: {
-    padding: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 24,
-  },
-  zoomControls: {
-    flexDirection: 'row',
-  },
-  zoomButton: {
-    padding: 10,
-    marginLeft: 10,
-  },
-  zoomButtonText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  highlightMenu: {
-    position: 'absolute',
-    top: 20,
+    top: 40,
     alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 5,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    zIndex: 20,
+  },
+  actionButton: {
     padding: 10,
   },
-  highlightButton: {
-    padding: 5,
-  },
-  highlightButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  annotationsContainer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
-    maxHeight: 200,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 5,
-  },
-  annotationsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: 'white',
-  },
-  annotationItem: {
+  controlsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
-  deleteButton: {
-    color: 'red',
-    fontSize: 20,
+  fontSizeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
+  fontSizeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 50,
+    textAlign: 'center',
+  },
+  controlButton: {
+    padding: 10,
+  },
+  readerContainer: {
+    flex: 1,
+  }
 });
 
 export default BookReaderScreen;

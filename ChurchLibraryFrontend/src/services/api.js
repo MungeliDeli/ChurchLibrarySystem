@@ -29,6 +29,13 @@ api.interceptors.request.use(
     const token = storageService.getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // Log warning in development if token is missing for protected routes
+      if (isDevelopment) {
+        console.warn(
+          `⚠️ No auth token found for request: ${config.method?.toUpperCase()} ${config.url}`
+        );
+      }
     }
 
     // Log requests in development
@@ -38,6 +45,7 @@ api.interceptors.request.use(
         {
           data: config.data,
           params: config.params,
+          hasToken: !!token,
         }
       );
     }

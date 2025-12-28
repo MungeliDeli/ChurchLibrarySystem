@@ -38,6 +38,9 @@ app.use('/api/books', libraryRoutes);
 const categoryRoutes = require('./src/routes/category.routes.js');
 app.use('/api/categories', categoryRoutes);
 
+const userRoutes = require('./src/routes/user.routes');
+app.use('/api/users', userRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

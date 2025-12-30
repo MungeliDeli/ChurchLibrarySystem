@@ -304,7 +304,7 @@ const StatisticsPage = () => {
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary-text)] mb-2">
+          <h1 className="text-2xl font-bold text-[var(--color-primary-text)] mb-6">
             Statistics Dashboard
           </h1>
           <p className="text-[var(--color-secondary-text)]">

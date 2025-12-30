@@ -165,10 +165,10 @@ const ActivityLogs = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-h1 text-[var(--color-primary-text)] mb-2">
+        <h1 className="text-2xl font-bold text-[var(--color-primary-text)] mb-6">
           Activity Logs
         </h1>
-        <p className="text-subheading text-[var(--color-secondary-text)]">
+        <p className="text-[var(--color-secondary-text)]">
           View and manage system activity logs
         </p>
       </div>

@@ -442,9 +442,9 @@ export const usersAPI = {
     }
   },
 
-  resetUserPassword: async (id) => {
+  resetUserPassword: async (id, data) => {
     try {
-      const response = await api.post(`/users/${id}/reset-password`);
+      const response = await api.post(`/users/${id}/reset-password`, data);
       return response;
     } catch (error) {
       throw new Error(handleError(error, "Failed to reset user password"));

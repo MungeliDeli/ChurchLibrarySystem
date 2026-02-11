@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, ToastAndroid, SafeAreaView } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { MaterialIcons } from '@expo/vector-icons';
 import EpubReader from '../../components/common/EpubReader';
 import PdfReader from '../../components/common/PdfReader';
@@ -13,20 +14,20 @@ import { saveReadingProgress } from '../../services/progressService';
 // Simple debounce implementation
 function debounce(func, wait) {
   let timeout;
-  return function(...args) {
+  return function (...args) {
     const context = this;
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(context, args), wait);
   };
 }
 
-const ReaderControls = React.memo(({ 
-  onToggleFullScreen, 
-  onIncreaseFontSize, 
-  onDecreaseFontSize, 
-  isFullScreen, 
+const ReaderControls = React.memo(({
+  onToggleFullScreen,
+  onIncreaseFontSize,
+  onDecreaseFontSize,
+  isFullScreen,
   currentFontSize,
-  format 
+  format
 }) => {
   const { theme } = useTheme();
 
@@ -63,11 +64,11 @@ function BookReaderScreen({ route, navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isNoteModalVisible, setNoteModalVisible] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  
+
   // Format-specific state
   const [epubFontSize, setEpubFontSize] = useState(100);
   const [pdfScale, setPdfScale] = useState(1.5);
-  
+
   const readerRef = useRef(null);
   const annotationsRef = useRef(annotations);
   const isFullScreenRef = useRef(isFullScreen);
@@ -96,31 +97,49 @@ function BookReaderScreen({ route, navigation }) {
 
   useEffect(() => {
     if (downloadUrl) {
-      setIsLoading(true);
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', downloadUrl, true);
-      xhr.responseType = 'blob';
-
-      xhr.onload = function(e) {
-        if (this.status == 200) {
-          const blob = this.response;
-          const reader = new FileReader();
-          reader.onload = function() {
-            const base64String = reader.result.split(',')[1];
-            setBookData(base64String);
+      const loadBook = async () => {
+        setIsLoading(true);
+        try {
+          if (downloadUrl.startsWith('file://')) {
+            // Load from local storage
+            const base64 = await FileSystem.readAsStringAsync(downloadUrl, { encoding: FileSystem.EncodingType.Base64 });
+            setBookData(base64);
             setIsLoading(false);
-          };
-          reader.readAsDataURL(blob);
-        } else {
+          } else {
+            // Load from remote URL
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', downloadUrl, true);
+            xhr.responseType = 'blob';
+
+            xhr.onload = function (e) {
+              if (this.status == 200) {
+                const blob = this.response;
+                const reader = new FileReader();
+                reader.onload = function () {
+                  const base64String = reader.result.split(',')[1];
+                  setBookData(base64String);
+                  setIsLoading(false);
+                };
+                reader.readAsDataURL(blob);
+              } else {
+                setIsLoading(false);
+                ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+              }
+            };
+            xhr.onerror = function () {
+              setIsLoading(false);
+              ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+            };
+            xhr.send();
+          }
+        } catch (e) {
+          console.error("Error loading book:", e);
           setIsLoading(false);
-          ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+          ToastAndroid.show('Error loading book', ToastAndroid.SHORT);
         }
       };
-      xhr.onerror = function() {
-        setIsLoading(false);
-        ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
-      };
-      xhr.send();
+
+      loadBook();
     }
   }, [downloadUrl]);
 

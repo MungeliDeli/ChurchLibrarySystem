@@ -23,6 +23,9 @@ const API_CONFIG = {
 // Create axios instance
 const api = axios.create(API_CONFIG);
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ['/auth/login', '/auth/register', '/auth/refresh', '/health'];
+
 // Request interceptor to add auth token and logging
 api.interceptors.request.use(
   (config) => {
@@ -31,7 +34,8 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     } else {
       // Log warning in development if token is missing for protected routes
-      if (isDevelopment) {
+      const isPublicRoute = PUBLIC_ROUTES.some(route => config.url?.includes(route));
+      if (isDevelopment && !isPublicRoute) {
         console.warn(
           `⚠️ No auth token found for request: ${config.method?.toUpperCase()} ${config.url}`
         );
@@ -64,8 +68,7 @@ api.interceptors.response.use(
     // Log responses in development
     if (isDevelopment) {
       console.log(
-        `✅ API Response: ${response.config.method?.toUpperCase()} ${
-          response.config.url
+        `✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url
         }`,
         {
           status: response.status,
@@ -82,8 +85,7 @@ api.interceptors.response.use(
     // Log errors in development
     if (isDevelopment) {
       console.error(
-        `❌ API Error: ${error.config?.method?.toUpperCase()} ${
-          error.config?.url
+        `❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url
         }`,
         {
           status: error.response?.status,
@@ -139,8 +141,12 @@ api.interceptors.response.use(
           break;
         case 401:
           // Unauthorized - clear token and redirect to login
-          storageService.clearAuthData();
-          window.location.href = "/login";
+          // Only redirect if not already on login page
+          if (!window.location.pathname.includes('/login')) {
+            storageService.clearAuthData();
+            console.log('🔒 Authentication failed. Redirecting to login...');
+            window.location.href = "/login";
+          }
           break;
         case 403:
           console.error("Forbidden: Access denied");
@@ -626,7 +632,7 @@ export const activityLogsAPI = {
         params: { ...params, format },
         responseType: "blob",
       });
-      
+
       // Create download link
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
@@ -638,7 +644,7 @@ export const activityLogsAPI = {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       return { success: true };
     } catch (error) {
       throw new Error(handleError(error, "Failed to export activity logs"));

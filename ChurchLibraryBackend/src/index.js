@@ -33,6 +33,9 @@ app.use('/api/users', userRoutes);
 const annotationRoutes = require('./routes/annotation.routes');
 app.use('/api/annotations', annotationRoutes);
 
+const readingScheduleRoutes = require('./routes/readingSchedule.routes');
+app.use('/api/reading-schedules', readingScheduleRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

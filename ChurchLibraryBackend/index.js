@@ -41,6 +41,9 @@ app.use('/api/categories', categoryRoutes);
 const userRoutes = require('./src/routes/user.routes');
 app.use('/api/users', userRoutes);
 
+const activityRoutes = require('./src/routes/activity.routes');
+app.use('/api/activity', activityRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

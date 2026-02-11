@@ -24,8 +24,9 @@ export const loginUser = createAsyncThunk(
       const response = await authAPI.login(credentials);
       const { user, token, refreshToken } = response.data;
 
-      // Store tokens in local storage for API interceptors
+      // Store tokens and user data in local storage for API interceptors
       storageService.setAuthToken(token);
+      storageService.setUserData(user);
       if (refreshToken) {
         storageService.setRefreshToken(refreshToken);
       }

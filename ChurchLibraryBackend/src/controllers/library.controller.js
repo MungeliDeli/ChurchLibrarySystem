@@ -1,4 +1,5 @@
 const db = require('../../models');
+const { ActivityLog } = require('../../models');
 const { uploadFileToS3, getSignedUrlForS3Key, deleteFileFromS3 } = require('../utils/s3');
 const { generateThumbnailFromPdf, generateThumbnailFromEpub } = require('../utils/thumbnail');
 const fs = require('fs');
@@ -109,6 +110,19 @@ exports.createItem = async (req, res) => {
     }
 
     const newItem = await db.LibraryItem.create(itemData);
+
+    // Log activity
+    try {
+      await ActivityLog.create({
+        actorId: req.user.id,
+        actionType: 'CREATE_LIBRARY_ITEM',
+        affectedResource: newItem.title,
+        ipAddress: req.ip || req.connection.remoteAddress
+      });
+    } catch (logError) {
+      console.error('Error logging activity for create book:', logError);
+      // Don't fail the request if logging fails
+    }
 
     res.status(201).json({
       message: 'Library item created successfully.',
@@ -226,7 +240,7 @@ exports.updateItem = async (req, res) => {
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
-      
+
       let tempFilePath;
       try {
         if (req.file.mimetype === 'application/pdf') {
@@ -278,6 +292,18 @@ exports.updateItem = async (req, res) => {
     // Update the item with data from request body
     const updatedItem = await item.update(updateData);
 
+    // Log activity
+    try {
+      await ActivityLog.create({
+        actorId: req.user.id,
+        actionType: 'UPDATE_LIBRARY_ITEM',
+        affectedResource: updatedItem.title,
+        ipAddress: req.ip || req.connection.remoteAddress
+      });
+    } catch (logError) {
+      console.error('Error logging activity for update book:', logError);
+    }
+
     res.status(200).json({
       message: 'Library item updated successfully.',
       item: updatedItem,
@@ -316,6 +342,18 @@ exports.deleteItem = async (req, res) => {
 
     await item.destroy();
     console.log("Item destroyed successfully from database.");
+
+    // Log activity
+    try {
+      await ActivityLog.create({
+        actorId: req.user.id,
+        actionType: 'DELETE_LIBRARY_ITEM',
+        affectedResource: item.title,
+        ipAddress: req.ip || req.connection.remoteAddress
+      });
+    } catch (logError) {
+      console.error('Error logging activity for delete book:', logError);
+    }
 
     res.status(200).json({ message: 'Library item deleted successfully.' });
   } catch (error) {

@@ -40,12 +40,12 @@ export default function NotesHighlightsScreen() {
                 params: {
                     itemId: item.itemId,
                     downloadUrl: item.LibraryItem.fileUrl,
-                    location: item.textLocation,
+                    initialLocation: item.textLocation,
                 },
             });
         }
     };
-    
+
     const handleDelete = (annotationId) => {
         Alert.alert(
             "Delete Annotation",
@@ -56,7 +56,7 @@ export default function NotesHighlightsScreen() {
                     style: "cancel"
                 },
                 {
-                    text: "OK", 
+                    text: "OK",
                     onPress: async () => {
                         try {
                             await deleteAnnotation(annotationId);

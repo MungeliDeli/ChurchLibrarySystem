@@ -6,6 +6,7 @@ import LoadingSpinner from "./LoadingSpinner";
 import Button from "./Button";
 import { clsx } from "clsx";
 import { MdSearch, MdDownload, MdArchive, MdFilterList, MdClear } from "react-icons/md";
+import storageService from "../../services/storageService";
 
 const ActivityLogs = () => {
   const dispatch = useDispatch();
@@ -25,9 +26,25 @@ const ActivityLogs = () => {
   });
   const [selectedLogs, setSelectedLogs] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
   const fetchLogs = async () => {
+    // Check authentication before making request
+    const token = storageService.getAuthToken();
+    if (!token) {
+      setAuthError("You must be logged in to view activity logs.");
+      return;
+    }
+
+    // Check if user is admin (activity logs require admin role)
+    const userData = storageService.getUserData();
+    if (!userData || userData.role !== 'admin') {
+      setAuthError("Activity logs are only available to administrators.");
+      return;
+    }
+
     setLoading(true);
+    setAuthError(null);
     try {
       const params = {
         page: pagination.page,
@@ -44,12 +61,15 @@ const ActivityLogs = () => {
         totalPages: data.pagination?.totalPages || 0,
       }));
     } catch (error) {
-      dispatch(
-        addToast({
-          message: error.message || "Failed to fetch activity logs",
-          type: "error",
-        })
-      );
+      // Don't show error toast for 401/403 - we already have authError state
+      if (error.response?.status !== 401 && error.response?.status !== 403) {
+        dispatch(
+          addToast({
+            message: error.message || "Failed to fetch activity logs",
+            type: "error",
+          })
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -173,50 +193,61 @@ const ActivityLogs = () => {
         </p>
       </div>
 
-      {/* Filters and Actions */}
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <Button
-          onClick={() => setShowFilters(!showFilters)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <MdFilterList className="text-lg" />
-          {showFilters ? "Hide Filters" : "Show Filters"}
-        </Button>
-
-        {selectedLogs.length > 0 && (
-          <Button
-            onClick={handleArchive}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <MdArchive className="text-lg" />
-            Archive Selected ({selectedLogs.length})
-          </Button>
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            onClick={() => handleExport("json")}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <MdDownload className="text-lg" />
-            Export JSON
-          </Button>
-          <Button
-            onClick={() => handleExport("csv")}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <MdDownload className="text-lg" />
-            Export CSV
-          </Button>
+      {/* Authentication Error Display */}
+      {authError && (
+        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <p className="text-yellow-800 dark:text-yellow-200">
+            {authError}
+          </p>
         </div>
-      </div>
+      )}
+
+      {/* Filters and Actions */}
+      {!authError && (
+        <div className="mb-4 flex flex-wrap items-center gap-4">
+          <Button
+            onClick={() => setShowFilters(!showFilters)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <MdFilterList className="text-lg" />
+            {showFilters ? "Hide Filters" : "Show Filters"}
+          </Button>
+
+          {selectedLogs.length > 0 && (
+            <Button
+              onClick={handleArchive}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <MdArchive className="text-lg" />
+              Archive Selected ({selectedLogs.length})
+            </Button>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              onClick={() => handleExport("json")}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <MdDownload className="text-lg" />
+              Export JSON
+            </Button>
+            <Button
+              onClick={() => handleExport("csv")}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <MdDownload className="text-lg" />
+              Export CSV
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Filter Panel */}
-      {showFilters && (
+      {!authError && showFilters && (
         <div className="mb-4 p-4 bg-[var(--color-surface)] rounded-lg border-faint">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -292,144 +323,146 @@ const ActivityLogs = () => {
       )}
 
       {/* Logs Table */}
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <LoadingSpinner />
-        </div>
-      ) : (
-        <div className="bg-[var(--color-surface)] rounded-lg border-faint overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[var(--color-surface)] border-b border-faint">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={
-                        logs.length > 0 && selectedLogs.length === logs.length
-                      }
-                      onChange={handleSelectAll}
-                      className="rounded"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
-                    User
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
-                    Action
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
-                    Resource
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
-                    IP Address
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-faint">
-                {logs.length === 0 ? (
+      {!authError && (
+        loading ? (
+          <div className="flex justify-center items-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="bg-[var(--color-surface)] rounded-lg border-faint overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[var(--color-surface)] border-b border-faint">
                   <tr>
-                    <td
-                      colSpan="6"
-                      className="px-4 py-8 text-center text-[var(--color-secondary-text)]"
-                    >
-                      No activity logs found
-                    </td>
+                    <th className="px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={
+                          logs.length > 0 && selectedLogs.length === logs.length
+                        }
+                        onChange={handleSelectAll}
+                        className="rounded"
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
+                      User
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
+                      Action
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
+                      Resource
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--color-primary-text)]">
+                      IP Address
+                    </th>
                   </tr>
-                ) : (
-                  logs.map((log) => (
-                    <tr
-                      key={log.logId}
-                      className={clsx(
-                        "hover:bg-[var(--color-surface-hover)] transition-colors",
-                        selectedLogs.includes(log.logId) &&
-                          "bg-[var(--color-primary-surface)]"
-                      )}
-                    >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedLogs.includes(log.logId)}
-                          onChange={() => handleSelectLog(log.logId)}
-                          className="rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
-                        {formatDate(log.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
-                        <div>
-                          <div className="font-medium">
-                            {log.User?.name || "N/A"}
-                          </div>
-                          <div className="text-xs text-[var(--color-secondary-text)]">
-                            {log.User?.email || "N/A"}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
-                        <span className="px-2 py-1 rounded bg-[var(--color-info-surface)] text-[var(--color-info-text)] text-xs font-medium">
-                          {log.actionType}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
-                        <div className="max-w-xs truncate" title={log.affectedResource}>
-                          {log.affectedResource || "N/A"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[var(--color-secondary-text)]">
-                        {log.ipAddress || "N/A"}
+                </thead>
+                <tbody className="divide-faint">
+                  {logs.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="px-4 py-8 text-center text-[var(--color-secondary-text)]"
+                      >
+                        No activity logs found
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="px-4 py-3 border-t border-faint flex items-center justify-between">
-              <div className="text-sm text-[var(--color-secondary-text)]">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-                of {pagination.total} logs
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      page: Math.max(1, prev.page - 1),
-                    }))
-                  }
-                  disabled={pagination.page === 1}
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-[var(--color-primary-text)]">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <Button
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      page: Math.min(prev.totalPages, prev.page + 1),
-                    }))
-                  }
-                  disabled={pagination.page === pagination.totalPages}
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
+                  ) : (
+                    logs.map((log) => (
+                      <tr
+                        key={log.logId}
+                        className={clsx(
+                          "hover:bg-[var(--color-surface-hover)] transition-colors",
+                          selectedLogs.includes(log.logId) &&
+                          "bg-[var(--color-primary-surface)]"
+                        )}
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedLogs.includes(log.logId)}
+                            onChange={() => handleSelectLog(log.logId)}
+                            className="rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
+                          {formatDate(log.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
+                          <div>
+                            <div className="font-medium">
+                              {log.User?.name || "N/A"}
+                            </div>
+                            <div className="text-xs text-[var(--color-secondary-text)]">
+                              {log.User?.email || "N/A"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
+                          <span className="px-2 py-1 rounded bg-[var(--color-info-surface)] text-[var(--color-info-text)] text-xs font-medium">
+                            {log.actionType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[var(--color-primary-text)]">
+                          <div className="max-w-xs truncate" title={log.affectedResource}>
+                            {log.affectedResource || "N/A"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[var(--color-secondary-text)]">
+                          {log.ipAddress || "N/A"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="px-4 py-3 border-t border-faint flex items-center justify-between">
+                <div className="text-sm text-[var(--color-secondary-text)]">
+                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
+                  {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+                  of {pagination.total} logs
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: Math.max(1, prev.page - 1),
+                      }))
+                    }
+                    disabled={pagination.page === 1}
+                    variant="outline"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-[var(--color-primary-text)]">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    onClick={() =>
+                      setPagination((prev) => ({
+                        ...prev,
+                        page: Math.min(prev.totalPages, prev.page + 1),
+                      }))
+                    }
+                    disabled={pagination.page === pagination.totalPages}
+                    variant="outline"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
       )}
     </div>
   );

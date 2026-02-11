@@ -9,10 +9,10 @@ module.exports = {
         defaultValue: Sequelize.UUIDV4
       },
       actorId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Users',
+          model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',

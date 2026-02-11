@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import ProfileScreen from "../screens/main/ProfileScreen";
 import MyStatisticsScreen from "../screens/drawer/MyStatisticsScreen";
 import NotesHighlightsScreen from "../screens/drawer/NotesHighlightsScreen";
-import ReadingScheduleScreen from "../screens/drawer/ReadingScheduleScreen";
+import ReadingScheduleScreen from "../screens/main/ReadingScheduleScreen";
 import DownloadsScreen from "../screens/drawer/DownloadsScreen";
 import SettingsScreen from "../screens/drawer/SettingsScreen";
 import HelpSupportScreen from "../screens/drawer/HelpSupportScreen";

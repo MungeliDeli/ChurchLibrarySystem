@@ -1,30 +1,72 @@
-import React from 'react';
-import { View, Text, StyleSheet, Button, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Button, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import useTheme from '../../hooks/useTheme';
+import { downloadBook, isBookDownloaded, getLocalBookUri } from '../../services/downloadService';
 
 function BookDetailsScreen({ route, navigation }) {
   const { theme } = useTheme();
   const { book } = route.params;
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
-  const handleRead = () => {
-    if (book.downloadUrl) {
+  useEffect(() => {
+    checkDownloadStatus();
+  }, []);
+
+  const checkDownloadStatus = async () => {
+    const downloaded = await isBookDownloaded(book.itemId);
+    setIsDownloaded(downloaded);
+  };
+
+  const handleRead = async () => {
+    let downloadUrlToUse = book.downloadUrl;
+
+    // If downloaded, use local URI
+    if (isDownloaded) {
+      const localUri = await getLocalBookUri(book.itemId);
+      if (localUri) {
+        downloadUrlToUse = localUri;
+      }
+    }
+
+    if (downloadUrlToUse) {
       // Determine format from book.format or file extension
       let format = 'epub'; // default
       if (book.format) {
         format = book.format.toLowerCase();
-      } else if (book.downloadUrl) {
-        if (book.downloadUrl.includes('.pdf')) {
+      } else if (downloadUrlToUse) {
+        if (downloadUrlToUse.includes('.pdf')) {
           format = 'pdf';
-        } else if (book.downloadUrl.includes('.epub')) {
+        } else if (downloadUrlToUse.includes('.epub')) {
           format = 'epub';
         }
       }
 
-      navigation.navigate('BookReader', { 
-        downloadUrl: book.downloadUrl, 
+      navigation.navigate('BookReader', {
+        downloadUrl: downloadUrlToUse,
         itemId: book.itemId,
         format: format
       });
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!book.downloadUrl) return;
+
+    setIsDownloading(true);
+    try {
+      await downloadBook(book, (progress) => {
+        setDownloadProgress(progress);
+      });
+      setIsDownloaded(true);
+      Alert.alert("Success", "Book downloaded successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to download book.");
+      console.error(error);
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(0);
     }
   };
 
@@ -47,7 +89,24 @@ function BookDetailsScreen({ route, navigation }) {
           {book.description}
         </Text>
         {book.downloadUrl && (
-          <Button title="Read Book" onPress={handleRead} />
+          <View style={styles.buttonContainer}>
+            <Button title={isDownloaded ? "Read Offline" : "Read Online"} onPress={handleRead} color={isDownloaded ? theme.colors.success : theme.colors.primary.main} />
+
+            {!isDownloaded && !isDownloading && (
+              <View style={styles.spacer} />
+            )}
+
+            {!isDownloaded && !isDownloading && (
+              <Button title="Download" onPress={handleDownload} color={theme.colors.secondary.main} />
+            )}
+
+            {isDownloading && (
+              <View style={styles.downloadingContainer}>
+                <ActivityIndicator size="small" color={theme.colors.primary.main} />
+                <Text style={{ color: theme.colors.text.primary }}>{Math.round(downloadProgress * 100)}%</Text>
+              </View>
+            )}
+          </View>
         )}
       </ScrollView>
     </View>
@@ -90,6 +149,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  spacer: {
+    width: 20,
+  },
+  downloadingContainer: {
+    marginLeft: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  }
 });
 
 export default React.memo(BookDetailsScreen);

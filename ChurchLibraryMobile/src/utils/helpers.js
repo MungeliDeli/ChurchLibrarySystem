@@ -22,3 +22,14 @@ export function debounce(fn, delay = 300) {
     timeoutId = setTimeout(() => fn(...args), delay);
   };
 }
+
+export function formatDate(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // invalid date
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}

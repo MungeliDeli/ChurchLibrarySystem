@@ -44,6 +44,18 @@ app.use('/api/users', userRoutes);
 const activityRoutes = require('./src/routes/activity.routes');
 app.use('/api/activity', activityRoutes);
 
+const homeRoutes = require('./src/routes/home.routes');
+app.use('/api/home', homeRoutes);
+
+const progressRoutes = require('./src/routes/progress.routes.js');
+app.use('/api/progress', progressRoutes);
+
+const annotationRoutes = require('./src/routes/annotation.routes');
+app.use('/api/annotations', annotationRoutes);
+
+const readingScheduleRoutes = require('./src/routes/readingSchedule.routes');
+app.use('/api/reading-schedules', readingScheduleRoutes);
+
 // Test Database Connection
 const testDbConnection = async () => {
   try {

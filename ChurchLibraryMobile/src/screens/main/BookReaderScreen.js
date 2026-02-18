@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, ToastAndroid, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Alert, SafeAreaView, Platform } from 'react-native';
+import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getUserToken } from '../../services/storageService';
 import EpubReader from '../../components/common/EpubReader';
 import PdfReader from '../../components/common/PdfReader';
 import NoteModal from '../../components/common/NoteModal';
@@ -62,6 +64,7 @@ function BookReaderScreen({ route, navigation }) {
   const [isReaderReady, setIsReaderReady] = useState(false);
   const [bookData, setBookData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [isNoteModalVisible, setNoteModalVisible] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
@@ -99,43 +102,106 @@ function BookReaderScreen({ route, navigation }) {
     if (downloadUrl) {
       const loadBook = async () => {
         setIsLoading(true);
+        setDownloadProgress(0);
+
         try {
           if (downloadUrl.startsWith('file://')) {
-            // Load from local storage
+            // Load from local storage (already downloaded)
+            console.log('[BookReader] Loading from local storage:', downloadUrl);
             const base64 = await FileSystem.readAsStringAsync(downloadUrl, { encoding: FileSystem.EncodingType.Base64 });
             setBookData(base64);
             setIsLoading(false);
           } else {
-            // Load from remote URL
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', downloadUrl, true);
-            xhr.responseType = 'blob';
+            // Download from remote URL to local cache first
+            console.log('[BookReader] Downloading PDF from remote URL:', downloadUrl);
 
-            xhr.onload = function (e) {
-              if (this.status == 200) {
-                const blob = this.response;
-                const reader = new FileReader();
-                reader.onload = function () {
-                  const base64String = reader.result.split(',')[1];
-                  setBookData(base64String);
-                  setIsLoading(false);
-                };
-                reader.readAsDataURL(blob);
-              } else {
-                setIsLoading(false);
-                ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
+            // NOTE: Do NOT send Authorization header for S3 presigned URLs
+            // Presigned URLs already contain authentication in the URL query parameters
+            // AWS S3 rejects requests with both Authorization header AND presigned URL auth
+
+            // Create a unique filename for caching
+            const filename = `pdf_${Date.now()}.pdf`;
+            const localPath = `${FileSystem.cacheDirectory}${filename}`;
+
+            console.log('[BookReader] Downloading to:', localPath);
+
+            // Create download with progress tracking
+            // Don't send auth headers - presigned URLs are self-authenticating
+            const downloadResumable = FileSystem.createDownloadResumable(
+              downloadUrl,
+              localPath,
+              {}, // Empty headers - presigned URL handles auth
+              (downloadProgress) => {
+                // Check if we have valid progress data
+                if (downloadProgress.totalBytesExpectedToWrite > 0) {
+                  const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+                  const percentage = Math.round(progress * 100);
+                  setDownloadProgress(percentage);
+                  console.log(`[BookReader] Download progress: ${percentage}% (${downloadProgress.totalBytesWritten}/${downloadProgress.totalBytesExpectedToWrite} bytes)`);
+                } else {
+                  console.log(`[BookReader] Download in progress: ${downloadProgress.totalBytesWritten} bytes (total unknown)`);
+                }
               }
-            };
-            xhr.onerror = function () {
+            );
+
+            // Start the download
+            const result = await downloadResumable.downloadAsync();
+
+            if (result && result.uri) {
+              console.log('[BookReader] Download complete. File saved at:', result.uri);
+              console.log('[BookReader] Status:', result.status);
+              console.log('[BookReader] Headers:', JSON.stringify(result.headers));
+
+              // Check file info
+              const fileInfo = await FileSystem.getInfoAsync(result.uri);
+              console.log('[BookReader] File size:', fileInfo.size, 'bytes');
+
+              // Validate file size - PDFs should be at least a few KB
+              if (fileInfo.size < 1000) {
+                console.error('[BookReader] Downloaded file is too small:', fileInfo.size, 'bytes');
+                // Read the content to see what we got
+                const content = await FileSystem.readAsStringAsync(result.uri);
+                console.error('[BookReader] Downloaded content preview:', content.substring(0, 500));
+
+                setIsLoading(false);
+                Alert.alert(
+                  'Download Failed',
+                  `Downloaded file is too small (${fileInfo.size} bytes). The URL might be returning an error. Please check the console logs.`,
+                  [{ text: 'OK' }]
+                );
+
+                // Clean up the bad file
+                await FileSystem.deleteAsync(result.uri, { idempotent: true });
+                return;
+              }
+
+              console.log('[BookReader] PDF ready to display from:', result.uri);
+
+              // For PDF files, store the local file path instead of base64
+              // This allows WebView to load directly from file system
+              setBookData(result.uri);
               setIsLoading(false);
-              ToastAndroid.show('Failed to load book', ToastAndroid.SHORT);
-            };
-            xhr.send();
+
+              // DON'T clean up - keep the file so WebView can load it
+              // We'll clean it up when user navigates away
+            } else {
+              console.error('[BookReader] Download failed - no result');
+              setIsLoading(false);
+              Alert.alert(
+                'Download Failed',
+                'Failed to download PDF',
+                [{ text: 'OK' }]
+              );
+            }
           }
         } catch (e) {
-          console.error("Error loading book:", e);
+          console.error('[BookReader] Error loading book:', e);
           setIsLoading(false);
-          ToastAndroid.show('Error loading book', ToastAndroid.SHORT);
+          Alert.alert(
+            'Error',
+            `Error loading book: ${e.message || 'Unknown error'}`,
+            [{ text: 'OK' }]
+          );
         }
       };
 
@@ -262,7 +328,10 @@ function BookReaderScreen({ route, navigation }) {
       const { text, cfiRange } = currentSelection;
       const isAlreadyHighlighted = annotations.some(a => a.textLocation === cfiRange);
       if (isAlreadyHighlighted) {
-        ToastAndroid.show('Text is already highlighted.', ToastAndroid.SHORT);
+        if (Platform.OS === 'android') {
+          const { ToastAndroid } = require('react-native');
+          ToastAndroid.show('Text is already highlighted.', ToastAndroid.SHORT);
+        }
         return;
       }
 
@@ -272,7 +341,10 @@ function BookReaderScreen({ route, navigation }) {
       try {
         const newAnnotation = await createAnnotation(itemId, cfiRange, highlightColor, noteToSave, isNote);
         if (newAnnotation) {
-          ToastAndroid.show('Annotation saved', ToastAndroid.SHORT);
+          if (Platform.OS === 'android') {
+            const { ToastAndroid } = require('react-native');
+            ToastAndroid.show('Annotation saved', ToastAndroid.SHORT);
+          }
           if (readerRef.current) {
             readerRef.current.highlight(cfiRange, highlightColor);
           }
@@ -281,10 +353,13 @@ function BookReaderScreen({ route, navigation }) {
           fetchAnnotations();
         }
       } catch (error) {
-        ToastAndroid.show("Failed to save annotation", ToastAndroid.SHORT);
+        Alert.alert('Error', 'Failed to save annotation', [{ text: 'OK' }]);
       }
     } else if (fileFormat === 'pdf') {
-      ToastAndroid.show('PDF annotations coming soon', ToastAndroid.SHORT);
+      if (Platform.OS === 'android') {
+        const { ToastAndroid } = require('react-native');
+        ToastAndroid.show('PDF annotations coming soon', ToastAndroid.SHORT);
+      }
     }
   };
 
@@ -299,10 +374,13 @@ function BookReaderScreen({ route, navigation }) {
           }
           setClickedAnnotationCfi(null);
           fetchAnnotations();
-          ToastAndroid.show('Highlight removed', ToastAndroid.SHORT);
+          if (Platform.OS === 'android') {
+            const { ToastAndroid } = require('react-native');
+            ToastAndroid.show('Highlight removed', ToastAndroid.SHORT);
+          }
         }
       } catch (error) {
-        ToastAndroid.show("Failed to remove highlight", ToastAndroid.SHORT);
+        Alert.alert('Error', 'Failed to remove highlight', [{ text: 'OK' }]);
         console.error(error);
       }
     }
@@ -312,7 +390,10 @@ function BookReaderScreen({ route, navigation }) {
     if (fileFormat === 'epub') {
       setEpubFontSize(prev => {
         const newSize = Math.min(prev + 10, 200);
-        ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        if (Platform.OS === 'android') {
+          const { ToastAndroid } = require('react-native');
+          ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        }
         return newSize;
       });
     } else if (fileFormat === 'pdf') {
@@ -321,7 +402,10 @@ function BookReaderScreen({ route, navigation }) {
         if (readerRef.current) {
           readerRef.current.setScale(newScale);
         }
-        ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        if (Platform.OS === 'android') {
+          const { ToastAndroid } = require('react-native');
+          ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        }
         return newScale;
       });
     }
@@ -331,7 +415,10 @@ function BookReaderScreen({ route, navigation }) {
     if (fileFormat === 'epub') {
       setEpubFontSize(prev => {
         const newSize = Math.max(prev - 10, 50);
-        ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        if (Platform.OS === 'android') {
+          const { ToastAndroid } = require('react-native');
+          ToastAndroid.show(`Font size: ${newSize}%`, ToastAndroid.SHORT);
+        }
         return newSize;
       });
     } else if (fileFormat === 'pdf') {
@@ -340,7 +427,10 @@ function BookReaderScreen({ route, navigation }) {
         if (readerRef.current) {
           readerRef.current.setScale(newScale);
         }
-        ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        if (Platform.OS === 'android') {
+          const { ToastAndroid } = require('react-native');
+          ToastAndroid.show(`Zoom: ${Math.round(newScale * 100)}%`, ToastAndroid.SHORT);
+        }
         return newScale;
       });
     }
@@ -351,7 +441,10 @@ function BookReaderScreen({ route, navigation }) {
       <View style={[styles.container, styles.center, { backgroundColor: theme.colors.background.primary }]}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
         <Text style={{ color: theme.colors.text.primary, marginTop: 10 }}>
-          Loading {fileFormat.toUpperCase()}...
+          {downloadProgress > 0 && downloadProgress < 100
+            ? `Downloading ${fileFormat.toUpperCase()}... ${downloadProgress}%`
+            : `Loading ${fileFormat.toUpperCase()}...`
+          }
         </Text>
       </View>
     );
@@ -422,16 +515,31 @@ function BookReaderScreen({ route, navigation }) {
             fontSize={epubFontSize}
           />
         ) : (
-          <PdfReader
-            key="pdf-reader"
-            ref={readerRef}
-            pdfData={bookData}
-            onSelection={handleSelection}
-            onLocationChange={handleLocationChange}
-            onReady={handleReaderReady}
-            onTap={handleTap}
-            scale={pdfScale}
-          />
+          <View style={{ flex: 1 }}>
+            <WebView
+              key="pdf-reader"
+              source={{ uri: bookData }}
+              style={{ flex: 1, backgroundColor: '#525659' }}
+              originWhitelist={['*']}
+              onLoadEnd={() => {
+                console.log('[BookReader] PDF WebView loaded');
+                handleReaderReady();
+              }}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('[BookReader] WebView error:', nativeEvent);
+                Alert.alert('PDF Error', 'Failed to load PDF in viewer', [{ text: 'OK' }]);
+              }}
+              javaScriptEnabled={true}
+              scalesPageToFit={true}
+              startInLoadingState={true}
+              renderLoading={() => (
+                <View style={[styles.container, styles.center]}>
+                  <ActivityIndicator size="large" color="#007AFF" />
+                </View>
+              )}
+            />
+          </View>
         )}
       </View>
       {!isReaderReady && (

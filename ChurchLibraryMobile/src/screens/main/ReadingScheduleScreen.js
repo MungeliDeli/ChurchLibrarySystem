@@ -291,7 +291,7 @@ export default function ReadingScheduleScreen() {
               {libraryBooks.map(item => (
                 <TouchableOpacity
                   key={item.itemId}
-                  style={{ padding: 10, backgroundColor: formData.bookId === item.itemId ? theme.colors.action.selected : 'transparent' }}
+                  style={{ padding: 10, backgroundColor: formData.bookId === item.itemId ? theme.colors.primary.light : 'transparent' }}
                   onPress={() => setFormData({ ...formData, bookId: item.itemId })}
                 >
                   <Text style={{ color: theme.colors.text.primary }}>{item.title}</Text>

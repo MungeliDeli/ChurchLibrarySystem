@@ -310,13 +310,13 @@ const html = `
 </html>
 `;
 
-const PdfReader = React.forwardRef(({ 
-    pdfData, 
-    onSelection, 
-    onLocationChange, 
-    onReady, 
-    onTap,
-    scale = 1.5
+const PdfReader = React.forwardRef(({
+  pdfData,
+  onSelection,
+  onLocationChange,
+  onReady,
+  onTap,
+  scale = 1.5
 }, ref) => {
   const webViewRef = useRef(null);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
@@ -341,9 +341,10 @@ const PdfReader = React.forwardRef(({
   useEffect(() => {
     if (webViewRef.current && pdfData && isWebViewReady) {
       const message = { pdfData, scale };
+      console.log('[PdfReader] Sending PDF data to WebView, length:', pdfData.length);
       webViewRef.current.postMessage(JSON.stringify(message));
       previousScaleRef.current = scale; // Initialize the ref
-      
+
       // Fallback: If ready event doesn't fire within 10 seconds, assume it's ready
       readyTimeoutRef.current = setTimeout(() => {
         console.log('[PdfReader] Timeout - forcing ready state');

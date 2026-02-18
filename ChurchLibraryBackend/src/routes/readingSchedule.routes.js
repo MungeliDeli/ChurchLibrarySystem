@@ -1,58 +1,48 @@
+const express = require('express');
+const router = express.Router();
 const controller = require("../controllers/readingSchedule.controller");
-const { authJwt } = require("../middleware");
+const { authenticateToken } = require("../middleware/auth.middleware");
 
-module.exports = function (app) {
-    app.use(function (req, res, next) {
-        res.header(
-            "Access-Control-Allow-Headers",
-            "x-access-token, Origin, Content-Type, Accept"
-        );
-        next();
-    });
+// Create a new schedule
+router.post(
+    "/",
+    authenticateToken,
+    controller.createSchedule
+);
 
-    const router = require("express").Router();
+// Get all user schedules
+router.get(
+    "/",
+    authenticateToken,
+    controller.getUserSchedules
+);
 
-    // Create a new schedule
-    router.post(
-        "/",
-        [authJwt.verifyToken],
-        controller.createSchedule
-    );
+// Get specific schedule
+router.get(
+    "/:id",
+    authenticateToken,
+    controller.getScheduleById
+);
 
-    // Get all user schedules
-    router.get(
-        "/",
-        [authJwt.verifyToken],
-        controller.getUserSchedules
-    );
+// Update schedule
+router.put(
+    "/:id",
+    authenticateToken,
+    controller.updateSchedule
+);
 
-    // Get specific schedule
-    router.get(
-        "/:id",
-        [authJwt.verifyToken],
-        controller.getScheduleById
-    );
+// Update progress
+router.put(
+    "/:id/progress",
+    authenticateToken,
+    controller.updateProgress
+);
 
-    // Update schedule
-    router.put(
-        "/:id",
-        [authJwt.verifyToken],
-        controller.updateSchedule
-    );
+// Delete schedule
+router.delete(
+    "/:id",
+    authenticateToken,
+    controller.deleteSchedule
+);
 
-    // Update progress
-    router.put(
-        "/:id/progress",
-        [authJwt.verifyToken],
-        controller.updateProgress
-    );
-
-    // Delete schedule
-    router.delete(
-        "/:id",
-        [authJwt.verifyToken],
-        controller.deleteSchedule
-    );
-
-    app.use('/api/reading-schedules', router);
-};
+module.exports = router;

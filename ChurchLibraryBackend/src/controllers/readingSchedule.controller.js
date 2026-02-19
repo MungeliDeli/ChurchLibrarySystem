@@ -60,7 +60,7 @@ exports.createSchedule = async (req, res) => {
         const estimatedEndDate = calculateEndDate(startDate, totalChapters, chaptersPerReading, readingsPerWeek);
 
         const schedule = await ReadingSchedule.create({
-            userId: req.userId, // From middleware
+            userId: req.user.id, // From middleware
             scheduleType,
             itemId: scheduleType === 'Book' ? itemId : null,
             title,
@@ -86,7 +86,7 @@ exports.createSchedule = async (req, res) => {
 exports.getUserSchedules = async (req, res) => {
     try {
         const schedules = await ReadingSchedule.findAll({
-            where: { userId: req.userId },
+            where: { userId: req.user.id },
             include: [
                 { model: LibraryItem, attributes: ['title', 'coverImageUrl'] }
             ],
@@ -112,7 +112,7 @@ exports.getScheduleById = async (req, res) => {
         const id = req.params.id;
 
         const schedule = await ReadingSchedule.findOne({
-            where: { scheduleId: id, userId: req.userId },
+            where: { scheduleId: id, userId: req.user.id },
             include: [
                 { model: LibraryItem, attributes: ['title', 'authors', 'coverImageUrl'] }
             ]
@@ -198,7 +198,7 @@ exports.updateSchedule = async (req, res) => {
         const id = req.params.id;
         const { chaptersPerReading, readingsPerWeek, title } = req.body;
 
-        const schedule = await ReadingSchedule.findOne({ where: { scheduleId: id, userId: req.userId } });
+        const schedule = await ReadingSchedule.findOne({ where: { scheduleId: id, userId: req.user.id } });
 
         if (!schedule) {
             return res.status(404).send({ message: "Schedule not found." });
@@ -231,7 +231,7 @@ exports.deleteSchedule = async (req, res) => {
     try {
         const id = req.params.id;
         const num = await ReadingSchedule.destroy({
-            where: { scheduleId: id, userId: req.userId }
+            where: { scheduleId: id, userId: req.user.id }
         });
 
         if (num == 1) {
@@ -256,7 +256,7 @@ exports.updateProgress = async (req, res) => {
             return res.status(400).send({ message: "Invalid chapters count." });
         }
 
-        const schedule = await ReadingSchedule.findOne({ where: { scheduleId: id, userId: req.userId } });
+        const schedule = await ReadingSchedule.findOne({ where: { scheduleId: id, userId: req.user.id } });
 
         if (!schedule) {
             return res.status(404).send({ message: "Schedule not found." });

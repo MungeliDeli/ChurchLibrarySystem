@@ -70,9 +70,9 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleContinueReadingPress = (book) => {
-    navigation.navigate('BookReader', {
-      itemId: book.itemId,
-      // Future enhancement: pass last read location from progress tracking
+    navigation.navigate('Library', {
+      screen: 'BookDetails',
+      params: { book },
     });
   };
 

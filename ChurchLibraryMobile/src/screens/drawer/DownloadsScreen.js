@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,16 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  ScrollView
+  ScrollView,
+  BackHandler
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import useTheme from '../../hooks/useTheme';
 import {
   getDownloadedBooks,
   removeDownloadedBook,
+  removeMultipleBooks,
   getTotalStorageUsed,
   deleteAllDownloads
 } from '../../services/downloadService';
@@ -34,12 +36,58 @@ export default function DownloadsScreen({ navigation }) {
   const [sortBy, setSortBy] = useState('date'); // 'date', 'title', 'format'
   const [filterFormat, setFilterFormat] = useState('all'); // 'all', 'pdf', 'epub'
 
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+
   // Fetch downloads when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchDownloads();
-    }, [])
+      // Handle hardware back button to exit selection mode
+      const onBackPress = () => {
+        if (isSelectionMode) {
+          exitSelectionMode();
+          return true;
+        }
+        return false;
+      };
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => backHandler.remove();
+    }, [isSelectionMode])
   );
+
+  // When selection mode is active, hide the tab bar (optional, but good UX)
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: isSelectionMode ? { display: 'none' } : undefined,
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={toggleSelectionMode}
+          style={{ paddingRight: 16 }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+            {isSelectionMode ? 'Cancel' : 'Select'}
+          </Text>
+        </TouchableOpacity>
+      ),
+      title: isSelectionMode ? `${selectedItems.size} Selected` : 'Downloads'
+    });
+  }, [navigation, isSelectionMode, selectedItems]);
+
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) {
+      exitSelectionMode();
+    } else {
+      setIsSelectionMode(true);
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedItems(new Set());
+  };
 
   const fetchDownloads = async () => {
     try {
@@ -65,6 +113,10 @@ export default function DownloadsScreen({ navigation }) {
   };
 
   const handleRead = (book) => {
+    if (isSelectionMode) {
+      toggleItemSelection(book.itemId);
+      return;
+    }
     navigation.navigate('Library', {
       screen: 'BookReader',
       params: {
@@ -75,15 +127,59 @@ export default function DownloadsScreen({ navigation }) {
     });
   };
 
+  const toggleItemSelection = (itemId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === filteredDownloads.length) {
+      // Deselect all
+      setSelectedItems(new Set());
+    } else {
+      // Select all visible items
+      const newSelected = new Set(filteredDownloads.map(b => b.itemId));
+      setSelectedItems(newSelected);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedItems.size === 0) return;
+
+    Alert.alert(
+      'Delete Selected',
+      `Delete ${selectedItems.size} book${selectedItems.size !== 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMultipleBooks(Array.from(selectedItems));
+              await fetchDownloads();
+              exitSelectionMode();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete books');
+              console.error(error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleDelete = (book) => {
     Alert.alert(
       'Delete Download',
       `Are you sure you want to delete "${book.title}"?`,
       [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -91,7 +187,6 @@ export default function DownloadsScreen({ navigation }) {
             try {
               await removeDownloadedBook(book.itemId);
               await fetchDownloads();
-              Alert.alert('Success', 'Book deleted successfully');
             } catch (error) {
               Alert.alert('Error', 'Failed to delete book');
               console.error('Delete error:', error);
@@ -102,6 +197,7 @@ export default function DownloadsScreen({ navigation }) {
     );
   };
 
+  // Keep existing logic for handleDeleteAll just in case, though Select All + Delete replaces it
   const handleDeleteAll = () => {
     if (downloads.length === 0) return;
 
@@ -109,10 +205,7 @@ export default function DownloadsScreen({ navigation }) {
       'Delete All Downloads',
       `Are you sure you want to delete all ${downloads.length} downloaded books? This cannot be undone.`,
       [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete All',
           style: 'destructive',
@@ -166,17 +259,9 @@ export default function DownloadsScreen({ navigation }) {
 
     // Apply sorting
     result.sort((a, b) => {
-      if (sortBy === 'title') {
-        return a.title.localeCompare(b.title);
-      }
-      if (sortBy === 'date') {
-        const dateB = new Date(b.downloadedAt);
-        const dateA = new Date(a.downloadedAt);
-        return dateB - dateA; // Newest first
-      }
-      if (sortBy === 'format') {
-        return a.format.localeCompare(b.format);
-      }
+      if (sortBy === 'title') return a.title.localeCompare(b.title);
+      if (sortBy === 'date') return new Date(b.downloadedAt) - new Date(a.downloadedAt);
+      if (sortBy === 'format') return a.format.localeCompare(b.format);
       return 0;
     });
 
@@ -209,7 +294,8 @@ export default function DownloadsScreen({ navigation }) {
         </View>
       </View>
 
-      {downloads.length > 0 && (
+      {/* Only show "Delete All" if NOT in selection mode */}
+      {!isSelectionMode && downloads.length > 0 && (
         <TouchableOpacity
           style={[styles.deleteAllButton, { backgroundColor: theme.colors.error }]}
           onPress={handleDeleteAll}
@@ -242,209 +328,183 @@ export default function DownloadsScreen({ navigation }) {
   const renderFilterControls = () => (
     <View style={styles.filterContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-        {/* Sort buttons */}
         <Text style={[styles.filterLabel, { color: theme.colors.text.secondary }]}>Sort:</Text>
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            sortBy === 'date' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setSortBy('date')}
-        >
-          <Feather
-            name="calendar"
-            size={14}
-            color={sortBy === 'date' ? 'white' : theme.colors.primary.main}
-          />
-          <Text style={[
-            styles.filterChipText,
-            { color: sortBy === 'date' ? 'white' : theme.colors.primary.main }
-          ]}>
-            Date
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            sortBy === 'title' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setSortBy('title')}
-        >
-          <Feather
-            name="type"
-            size={14}
-            color={sortBy === 'title' ? 'white' : theme.colors.primary.main}
-          />
-          <Text style={[
-            styles.filterChipText,
-            { color: sortBy === 'title' ? 'white' : theme.colors.primary.main }
-          ]}>
-            Title
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            sortBy === 'format' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setSortBy('format')}
-        >
-          <Feather
-            name="file"
-            size={14}
-            color={sortBy === 'format' ? 'white' : theme.colors.primary.main}
-          />
-          <Text style={[
-            styles.filterChipText,
-            { color: sortBy === 'format' ? 'white' : theme.colors.primary.main }
-          ]}>
-            Format
-          </Text>
-        </TouchableOpacity>
+        {['date', 'title', 'format'].map(sort => (
+          <TouchableOpacity
+            key={sort}
+            style={[
+              styles.filterChip,
+              sortBy === sort && { backgroundColor: theme.colors.primary.main },
+              { borderColor: theme.colors.primary.main }
+            ]}
+            onPress={() => setSortBy(sort)}
+          >
+            <Text style={[
+              styles.filterChipText,
+              { color: sortBy === sort ? 'white' : theme.colors.primary.main, textTransform: 'capitalize' }
+            ]}>
+              {sort}
+            </Text>
+          </TouchableOpacity>
+        ))}
 
         <View style={styles.filterDivider} />
 
-        {/* Format filter */}
         <Text style={[styles.filterLabel, { color: theme.colors.text.secondary }]}>Filter:</Text>
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            filterFormat === 'all' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setFilterFormat('all')}
-        >
-          <Text style={[
-            styles.filterChipText,
-            { color: filterFormat === 'all' ? 'white' : theme.colors.primary.main }
-          ]}>
-            All
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            filterFormat === 'pdf' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setFilterFormat('pdf')}
-        >
-          <Text style={[
-            styles.filterChipText,
-            { color: filterFormat === 'pdf' ? 'white' : theme.colors.primary.main }
-          ]}>
-            PDF
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            filterFormat === 'epub' && { backgroundColor: theme.colors.primary.main },
-            { borderColor: theme.colors.primary.main }
-          ]}
-          onPress={() => setFilterFormat('epub')}
-        >
-          <Text style={[
-            styles.filterChipText,
-            { color: filterFormat === 'epub' ? 'white' : theme.colors.primary.main }
-          ]}>
-            EPUB
-          </Text>
-        </TouchableOpacity>
+        {['all', 'pdf', 'epub'].map(fmt => (
+          <TouchableOpacity
+            key={fmt}
+            style={[
+              styles.filterChip,
+              filterFormat === fmt && { backgroundColor: theme.colors.primary.main },
+              { borderColor: theme.colors.primary.main }
+            ]}
+            onPress={() => setFilterFormat(fmt)}
+          >
+            <Text style={[
+              styles.filterChipText,
+              { color: filterFormat === fmt ? 'white' : theme.colors.primary.main, textTransform: 'uppercase' }
+            ]}>
+              {fmt}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </View>
   );
 
-  const renderBookItem = ({ item }) => (
-    <View style={[styles.bookCard, { backgroundColor: theme.colors.background.secondary }]}>
-      <View style={styles.bookContent}>
-        {item.coverImageUrl ? (
-          <Image
-            source={{ uri: item.coverImageUrl }}
-            style={styles.bookCover}
-          />
-        ) : (
-          <View style={[styles.bookCover, styles.placeholderCover, { backgroundColor: theme.colors.background.tertiary }]}>
-            <Feather name="book" size={32} color={theme.colors.text.tertiary} />
+  const renderBookItem = ({ item }) => {
+    const isSelected = selectedItems.has(item.itemId);
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.bookCard,
+          { backgroundColor: theme.colors.background.secondary },
+          isSelectionMode && isSelected && { borderColor: theme.colors.primary.main, borderWidth: 2 }
+        ]}
+        onPress={() => isSelectionMode ? toggleItemSelection(item.itemId) : handleRead(item)}
+        onLongPress={() => {
+          if (!isSelectionMode) {
+            setIsSelectionMode(true);
+            toggleItemSelection(item.itemId);
+          }
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.bookContent}>
+          {/* Checkbox for selection mode */}
+          {isSelectionMode && (
+            <View style={styles.selectionIndicator}>
+              <MaterialIcons
+                name={isSelected ? "check-circle" : "radio-button-unchecked"}
+                size={24}
+                color={isSelected ? theme.colors.primary.main : theme.colors.text.tertiary}
+              />
+            </View>
+          )}
+
+          {item.coverImageUrl ? (
+            <Image source={{ uri: item.coverImageUrl }} style={styles.bookCover} />
+          ) : (
+            <View style={[styles.bookCover, styles.placeholderCover, { backgroundColor: theme.colors.background.tertiary }]}>
+              <Feather name="book" size={32} color={theme.colors.text.tertiary} />
+            </View>
+          )}
+
+          <View style={styles.bookInfo}>
+            <Text style={[styles.bookTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <View style={styles.bookMeta}>
+              <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>
+                {item.format?.toUpperCase() || 'EPUB'}
+              </Text>
+              <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>•</Text>
+              <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>
+                {formatFileSize(item.fileSize)}
+              </Text>
+            </View>
+            <Text style={[styles.bookDate, { color: theme.colors.text.tertiary }]}>
+              {formatDate(item.downloadedAt)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Hide action buttons in selection mode to simplify UI */}
+        {!isSelectionMode && (
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.readButton, { backgroundColor: theme.colors.primary.main }]}
+              onPress={() => handleRead(item)}
+            >
+              <Feather name="book-open" size={18} color="white" />
+              <Text style={styles.buttonText}>Read</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton, { backgroundColor: theme.colors.error }]}
+              onPress={() => handleDelete(item)}
+            >
+              <Feather name="trash-2" size={18} color="white" />
+              <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
           </View>
         )}
-        <View style={styles.bookInfo}>
-          <Text
-            style={[styles.bookTitle, { color: theme.colors.text.primary }]}
-            numberOfLines={2}
-          >
-            {item.title}
-          </Text>
-          <View style={styles.bookMeta}>
-            <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>
-              {item.format?.toUpperCase() || 'EPUB'}
-            </Text>
-            <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>
-              •
-            </Text>
-            <Text style={[styles.bookMetaText, { color: theme.colors.text.secondary }]}>
-              {formatFileSize(item.fileSize)}
-            </Text>
-          </View>
-          <Text style={[styles.bookDate, { color: theme.colors.text.tertiary }]}>
-            {formatDate(item.downloadedAt)}
-          </Text>
-        </View>
-      </View>
+      </TouchableOpacity>
+    );
+  };
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.readButton, { backgroundColor: theme.colors.primary.main }]}
-          onPress={() => handleRead(item)}
-        >
-          <Feather name="book-open" size={18} color="white" />
-          <Text style={styles.buttonText}>Read</Text>
+  const renderSelectionBar = () => {
+    if (!isSelectionMode) return null;
+
+    return (
+      <View style={[styles.selectionBar, { backgroundColor: theme.colors.background.paper }]}>
+        <TouchableOpacity style={styles.selectionButton} onPress={handleSelectAll}>
+          <MaterialIcons
+            name={selectedItems.size === filteredDownloads.length && filteredDownloads.length > 0 ? "check-box" : "check-box-outline-blank"}
+            size={24}
+            color={theme.colors.primary.main}
+          />
+          <Text style={[styles.selectionButtonText, { color: theme.colors.text.primary }]}>
+            {selectedItems.size === filteredDownloads.length && filteredDownloads.length > 0 ? "Deselect All" : "Select All"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.button, styles.deleteButton, { backgroundColor: theme.colors.error }]}
-          onPress={() => handleDelete(item)}
+          style={[
+            styles.deleteSelectedButton,
+            { backgroundColor: selectedItems.size > 0 ? theme.colors.error : theme.colors.components.disabled }
+          ]}
+          onPress={handleDeleteSelected}
+          disabled={selectedItems.size === 0}
         >
-          <Feather name="trash-2" size={18} color="white" />
-          <Text style={styles.buttonText}>Delete</Text>
+          <Feather name="trash-2" size={20} color="white" />
+          <Text style={styles.deleteSelectedText}>
+            Delete ({selectedItems.size})
+          </Text>
         </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  };
+
 
   const renderEmptyState = () => {
     const hasActiveFilters = searchQuery.trim() || filterFormat !== 'all';
-
     if (hasActiveFilters && filteredDownloads.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <Feather name="search" size={64} color={theme.colors.text.tertiary} />
-          <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-            No Results Found
-          </Text>
-          <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-            Try adjusting your search or filters
-          </Text>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Results Found</Text>
+          <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>Try adjusting your search or filters</Text>
         </View>
       );
     }
-
     return (
       <View style={styles.emptyContainer}>
         <Feather name="download" size={64} color={theme.colors.text.tertiary} />
-        <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
-          No Downloads Yet
-        </Text>
-        <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-          Books you download will appear here for offline reading
-        </Text>
+        <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>No Downloads Yet</Text>
+        <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>Books you download will appear here for offline reading</Text>
       </View>
     );
   };
@@ -453,9 +513,7 @@ export default function DownloadsScreen({ navigation }) {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: theme.colors.background.primary }]}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
-        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
-          Loading downloads...
-        </Text>
+        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>Loading downloads...</Text>
       </View>
     );
   }
@@ -474,11 +532,12 @@ export default function DownloadsScreen({ navigation }) {
         data={filteredDownloads}
         renderItem={renderBookItem}
         keyExtractor={(item) => item.itemId.toString()}
-        contentContainerStyle={
+        contentContainerStyle={[
           filteredDownloads.length === 0 && downloads.length === 0
             ? styles.emptyListContainer
-            : styles.listContainer
-        }
+            : styles.listContainer,
+          isSelectionMode && { paddingBottom: 80 } // add padding for selection bar
+        ]}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
@@ -489,22 +548,15 @@ export default function DownloadsScreen({ navigation }) {
           />
         }
       />
+      {renderSelectionBar()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-  },
+  container: { flex: 1 },
+  centered: { justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 16 },
   storageHeader: {
     padding: 16,
     flexDirection: 'row',
@@ -513,183 +565,99 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  storageInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  storageItem: {
-    alignItems: 'center',
-    paddingHorizontal: 12,
-  },
-  storageValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  storageLabel: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  storageDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 8,
-  },
+  storageInfo: { flexDirection: 'row', alignItems: 'center' },
+  storageItem: { alignItems: 'center', paddingHorizontal: 12 },
+  storageValue: { fontSize: 20, fontWeight: 'bold', marginTop: 4 },
+  storageLabel: { fontSize: 12, marginTop: 2 },
+  storageDivider: { width: 1, height: 40, backgroundColor: '#e0e0e0', marginHorizontal: 8 },
   deleteAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    gap: 6,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12,
+    paddingVertical: 8, borderRadius: 6, gap: 6,
   },
-  deleteAllText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  deleteAllText: { color: 'white', fontSize: 14, fontWeight: '600' },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', margin: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    padding: 0,
-  },
-  filterContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  filterScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 4,
-  },
+  searchInput: { flex: 1, fontSize: 16, padding: 0 },
+  filterContainer: { paddingHorizontal: 16, marginBottom: 8 },
+  filterScroll: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  filterLabel: { fontSize: 14, fontWeight: '600', marginRight: 4 },
   filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 4,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12,
+    paddingVertical: 6, borderRadius: 16, borderWidth: 1, gap: 4,
   },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  filterDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 8,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  emptyListContainer: {
-    flex: 1,
-  },
+  filterChipText: { fontSize: 14, fontWeight: '500' },
+  filterDivider: { width: 1, height: 24, backgroundColor: '#e0e0e0', marginHorizontal: 8 },
+  listContainer: { padding: 16 },
+  emptyListContainer: { flex: 1 },
   bookCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  bookContent: { flexDirection: 'row', marginBottom: 12 },
+  bookCover: { width: 80, height: 120, borderRadius: 8, marginRight: 12, backgroundColor: '#e0e0e0' },
+  placeholderCover: { justifyContent: 'center', alignItems: 'center' },
+  bookInfo: { flex: 1, justifyContent: 'center' },
+  bookTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 6 },
+  bookMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  bookMetaText: { fontSize: 14 },
+  bookDate: { fontSize: 12, fontStyle: 'italic' },
+  buttonContainer: { flexDirection: 'row', gap: 12 },
+  button: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, gap: 6,
+  },
+  readButton: {},
+  deleteButton: {},
+  buttonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emptyTitle: { fontSize: 24, fontWeight: 'bold', marginTop: 16, marginBottom: 8 },
+  emptyText: { fontSize: 16, textAlign: 'center', lineHeight: 24 },
+
+  // Selection Mode Styles
+  selectionIndicator: {
+    justifyContent: 'center',
+    paddingRight: 10,
+  },
+  selectionBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
-  bookContent: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  bookCover: {
-    width: 80,
-    height: 120,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#e0e0e0',
-  },
-  placeholderCover: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  bookTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 6,
-  },
-  bookMeta: {
+  selectionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 8,
   },
-  bookMetaText: {
-    fontSize: 14,
-  },
-  bookDate: {
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
-  },
-  readButton: {
-    // backgroundColor set dynamically
-  },
-  deleteButton: {
-    // backgroundColor set dynamically
-  },
-  buttonText: {
-    color: 'white',
+  selectionButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  deleteSelectedButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 32,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    gap: 8,
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyText: {
+  deleteSelectedText: {
+    color: 'white',
     fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
+    fontWeight: '600',
   },
 });

@@ -2,17 +2,22 @@ const { LibraryItem, ActivityLog, ReadingProgress, Category } = require('../../m
 const { Op, Sequelize } = require('sequelize');
 const { getSignedUrlForS3Key } = require('../utils/s3');
 
-// Helper function to sign URLs for a list of items
+// Helper function to sign URLs for a list of items.
+// Signs both coverImageUrl and fileUrl (exposed as downloadUrl) so that
+// BookDetailsScreen always has a downloadUrl to show the Read/Download buttons.
 const signCoverImageUrls = async (items) => {
-  return Promise.all(
-    items.map(async (item) => {
-      const plainItem = item.toJSON ? item.toJSON() : { ...item };
-      if (plainItem.coverImageUrl) {
-        plainItem.coverImageUrl = await getSignedUrlForS3Key(plainItem.coverImageUrl);
-      }
-      return plainItem;
-    })
-  );
+    return Promise.all(
+        items.map(async (item) => {
+            const plainItem = item.toJSON ? item.toJSON() : { ...item };
+            if (plainItem.coverImageUrl) {
+                plainItem.coverImageUrl = await getSignedUrlForS3Key(plainItem.coverImageUrl);
+            }
+            if (plainItem.fileUrl) {
+                plainItem.downloadUrl = await getSignedUrlForS3Key(plainItem.fileUrl);
+            }
+            return plainItem;
+        })
+    );
 };
 
 
@@ -110,6 +115,7 @@ exports.getTrending = async (req, res) => {
 exports.getContinueReading = async (req, res) => {
     try {
         const userId = req.user.id;
+        const { ReadingSchedule } = require('../../models');
 
         const recentActivities = await ActivityLog.findAll({
             where: {
@@ -120,11 +126,24 @@ exports.getContinueReading = async (req, res) => {
             limit: 10
         });
 
-        if (!recentActivities.length) {
+        // Also include books that have an active reading schedule
+        const activeSchedules = await ReadingSchedule.findAll({
+            where: {
+                userId,
+                scheduleType: 'Book',
+                completed: false,
+                itemId: { [Op.ne]: null }
+            }
+        });
+
+        // Collect unique item IDs from both activity logs and active schedules
+        const activityItemIds = recentActivities.map(act => act.affectedResource);
+        const scheduleItemIds = activeSchedules.map(s => s.itemId);
+        const uniqueItemIds = [...new Set([...activityItemIds, ...scheduleItemIds])];
+
+        if (!uniqueItemIds.length) {
             return res.json([]);
         }
-
-        const uniqueItemIds = [...new Set(recentActivities.map(act => act.affectedResource))];
 
         const libraryItems = await LibraryItem.findAll({
             where: {
@@ -149,14 +168,32 @@ exports.getContinueReading = async (req, res) => {
 
         const signedLibraryItems = await signCoverImageUrls(libraryItems);
 
-        const orderedItems = uniqueItemIds
+        // Build a map of schedule progress by itemId (as a 0-1 fraction)
+        const scheduleProgressMap = {};
+        activeSchedules.forEach(s => {
+            if (s.itemId && s.totalChapters > 0) {
+                scheduleProgressMap[s.itemId] = s.currentChapter / s.totalChapters;
+            }
+        });
+
+        // Order: activity-based first, then schedule-only items
+        const orderedIds = [
+            ...activityItemIds,
+            ...scheduleItemIds.filter(id => !activityItemIds.includes(id))
+        ];
+
+        const orderedItems = [...new Set(orderedIds)]
             .map(id => {
                 const item = signedLibraryItems.find(item => item.itemId === id);
                 if (!item) return null;
-                const progress = progressRecords.find(p => p.itemId === id);
+                const readerProgress = progressRecords.find(p => p.itemId === id);
+                const readerProgressValue = readerProgress ? readerProgress.progress : 0;
+                const scheduleProgressValue = scheduleProgressMap[id] || 0;
+                // Use whichever progress value is higher
+                const progress = Math.max(readerProgressValue, scheduleProgressValue);
                 return {
                     ...item,
-                    progress: progress ? progress.progress : 0
+                    progress
                 };
             })
             .filter(Boolean)

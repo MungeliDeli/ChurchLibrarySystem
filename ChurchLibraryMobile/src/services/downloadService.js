@@ -105,6 +105,33 @@ export const removeDownloadedBook = async (itemId) => {
     }
 };
 
+// Remove multiple downloaded books
+export const removeMultipleBooks = async (itemIds) => {
+    try {
+        const downloads = await getDownloadedBooks();
+
+        // Process deletions in parallel
+        await Promise.all(itemIds.map(async (itemId) => {
+            const book = downloads[itemId];
+            if (book && book.localUri) {
+                try {
+                    await FileSystem.deleteAsync(book.localUri, { idempotent: true });
+                } catch (err) {
+                    console.error(`Failed to delete file for book ${itemId}:`, err);
+                }
+            }
+            delete downloads[itemId];
+        }));
+
+        // Update metadata once
+        await AsyncStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads));
+        return true;
+    } catch (e) {
+        console.error("Error removing multiple books:", e);
+        return false;
+    }
+};
+
 export const getLocalBookUri = async (itemId) => {
     const downloads = await getDownloadedBooks();
     return downloads[itemId] ? downloads[itemId].localUri : null;

@@ -107,32 +107,47 @@ function BookReaderScreen({ route, navigation }) {
         try {
           if (downloadUrl.startsWith('file://')) {
             // Load from local storage (already downloaded)
+            // Both epub and pdf are read as base64; EpubReader uses base64 directly,
+            // and PdfReader (WebView) receives the file path for pdf from getLocalBookUri.
             console.log('[BookReader] Loading from local storage:', downloadUrl);
-            const base64 = await FileSystem.readAsStringAsync(downloadUrl, { encoding: FileSystem.EncodingType.Base64 });
-            setBookData(base64);
+            if (fileFormat === 'epub') {
+              const base64 = await FileSystem.readAsStringAsync(downloadUrl, { encoding: FileSystem.EncodingType.Base64 });
+              setBookData(base64);
+            } else {
+              // PDF
+              if (Platform.OS === 'android') {
+                // Android WebView cannot render local PDF files directly.
+                // We must read as base64 and pass to our JS-based PdfReader (PDF.js).
+                console.log('[BookReader] Reading PDF as base64 for Android...');
+                const base64 = await FileSystem.readAsStringAsync(downloadUrl, { encoding: FileSystem.EncodingType.Base64 });
+                setBookData(base64);
+              } else {
+                // iOS: pass the file URI directly so WebView can load it natively
+                setBookData(downloadUrl);
+              }
+            }
             setIsLoading(false);
           } else {
             // Download from remote URL to local cache first
-            console.log('[BookReader] Downloading PDF from remote URL:', downloadUrl);
+            console.log(`[BookReader] Downloading ${fileFormat.toUpperCase()} from remote URL:`, downloadUrl);
 
             // NOTE: Do NOT send Authorization header for S3 presigned URLs
             // Presigned URLs already contain authentication in the URL query parameters
             // AWS S3 rejects requests with both Authorization header AND presigned URL auth
 
-            // Create a unique filename for caching
-            const filename = `pdf_${Date.now()}.pdf`;
+            // Create a unique filename with correct extension
+            const ext = fileFormat === 'epub' ? 'epub' : 'pdf';
+            const filename = `book_${Date.now()}.${ext}`;
             const localPath = `${FileSystem.cacheDirectory}${filename}`;
 
             console.log('[BookReader] Downloading to:', localPath);
 
             // Create download with progress tracking
-            // Don't send auth headers - presigned URLs are self-authenticating
             const downloadResumable = FileSystem.createDownloadResumable(
               downloadUrl,
               localPath,
               {}, // Empty headers - presigned URL handles auth
               (downloadProgress) => {
-                // Check if we have valid progress data
                 if (downloadProgress.totalBytesExpectedToWrite > 0) {
                   const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
                   const percentage = Math.round(progress * 100);
@@ -149,47 +164,61 @@ function BookReaderScreen({ route, navigation }) {
 
             if (result && result.uri) {
               console.log('[BookReader] Download complete. File saved at:', result.uri);
-              console.log('[BookReader] Status:', result.status);
-              console.log('[BookReader] Headers:', JSON.stringify(result.headers));
+              console.log('[BookReader] HTTP Status:', result.status);
 
               // Check file info
               const fileInfo = await FileSystem.getInfoAsync(result.uri);
               console.log('[BookReader] File size:', fileInfo.size, 'bytes');
 
-              // Validate file size - PDFs should be at least a few KB
+              // Validate file size - books should be at least a few KB
               if (fileInfo.size < 1000) {
                 console.error('[BookReader] Downloaded file is too small:', fileInfo.size, 'bytes');
-                // Read the content to see what we got
                 const content = await FileSystem.readAsStringAsync(result.uri);
                 console.error('[BookReader] Downloaded content preview:', content.substring(0, 500));
 
                 setIsLoading(false);
                 Alert.alert(
                   'Download Failed',
-                  `Downloaded file is too small (${fileInfo.size} bytes). The URL might be returning an error. Please check the console logs.`,
+                  `Downloaded file is too small (${fileInfo.size} bytes). The server may have returned an error.`,
                   [{ text: 'OK' }]
                 );
 
-                // Clean up the bad file
                 await FileSystem.deleteAsync(result.uri, { idempotent: true });
                 return;
               }
 
-              console.log('[BookReader] PDF ready to display from:', result.uri);
+              if (fileFormat === 'epub') {
+                // ePub: read as base64 so epub.js (running inside WebView) can parse it
+                console.log('[BookReader] Reading ePub as base64...');
+                const base64 = await FileSystem.readAsStringAsync(result.uri, { encoding: FileSystem.EncodingType.Base64 });
+                console.log('[BookReader] ePub base64 length:', base64.length);
+                setBookData(base64);
+                // Clean up temp file after reading into memory
+                await FileSystem.deleteAsync(result.uri, { idempotent: true });
+              } else {
+                // PDF
+                if (Platform.OS === 'android') {
+                  // Read as base64 for PdfReader
+                  console.log('[BookReader] Reading PDF as base64 for Android...');
+                  const base64 = await FileSystem.readAsStringAsync(result.uri, { encoding: FileSystem.EncodingType.Base64 });
+                  setBookData(base64);
+                  // Clean up temp file
+                  await FileSystem.deleteAsync(result.uri, { idempotent: true });
+                } else {
+                  // iOS: pass file URI directly to WebView
+                  console.log('[BookReader] PDF ready to display from:', result.uri);
+                  setBookData(result.uri);
+                  // DON'T clean up - keep the file so WebView can load it
+                }
+              }
 
-              // For PDF files, store the local file path instead of base64
-              // This allows WebView to load directly from file system
-              setBookData(result.uri);
               setIsLoading(false);
-
-              // DON'T clean up - keep the file so WebView can load it
-              // We'll clean it up when user navigates away
             } else {
               console.error('[BookReader] Download failed - no result');
               setIsLoading(false);
               Alert.alert(
                 'Download Failed',
-                'Failed to download PDF',
+                `Failed to download ${fileFormat.toUpperCase()}`,
                 [{ text: 'OK' }]
               );
             }
@@ -207,7 +236,7 @@ function BookReaderScreen({ route, navigation }) {
 
       loadBook();
     }
-  }, [downloadUrl]);
+  }, [downloadUrl, fileFormat]);
 
   // --- Log Reading Activity ---
   useEffect(() => {
@@ -516,29 +545,39 @@ function BookReaderScreen({ route, navigation }) {
           />
         ) : (
           <View style={{ flex: 1 }}>
-            <WebView
-              key="pdf-reader"
-              source={{ uri: bookData }}
-              style={{ flex: 1, backgroundColor: '#525659' }}
-              originWhitelist={['*']}
-              onLoadEnd={() => {
-                console.log('[BookReader] PDF WebView loaded');
-                handleReaderReady();
-              }}
-              onError={(syntheticEvent) => {
-                const { nativeEvent } = syntheticEvent;
-                console.error('[BookReader] WebView error:', nativeEvent);
-                Alert.alert('PDF Error', 'Failed to load PDF in viewer', [{ text: 'OK' }]);
-              }}
-              javaScriptEnabled={true}
-              scalesPageToFit={true}
-              startInLoadingState={true}
-              renderLoading={() => (
-                <View style={[styles.container, styles.center]}>
-                  <ActivityIndicator size="large" color="#007AFF" />
-                </View>
-              )}
-            />
+            {Platform.OS === 'android' ? (
+              <PdfReader
+                key="pdf-reader-android"
+                ref={readerRef}
+                pdfData={bookData}
+                onReady={handleReaderReady}
+                scale={pdfScale}
+              />
+            ) : (
+              <WebView
+                key="pdf-reader-ios"
+                source={{ uri: bookData }}
+                style={{ flex: 1, backgroundColor: '#525659' }}
+                originWhitelist={['*']}
+                onLoadEnd={() => {
+                  console.log('[BookReader] PDF WebView loaded');
+                  handleReaderReady();
+                }}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('[BookReader] WebView error:', nativeEvent);
+                  Alert.alert('PDF Error', 'Failed to load PDF in viewer', [{ text: 'OK' }]);
+                }}
+                javaScriptEnabled={true}
+                scalesPageToFit={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={[styles.container, styles.center]}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                  </View>
+                )}
+              />
+            )}
           </View>
         )}
       </View>
